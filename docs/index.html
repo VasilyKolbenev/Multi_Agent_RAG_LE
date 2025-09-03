@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MultiAgent‑RAG Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style> .mono{font-family: ui-monospace, Menlo, Consolas, monospace;} </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-6xl mx-auto p-6">
+    <header class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-bold">MultiAgent‑RAG Pro</h1>
+      <div class="text-xs text-slate-500">API: <code id="apiBase" class="mono"></code></div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <section class="bg-white rounded-2xl shadow p-4 lg:col-span-1">
+        <h2 class="font-semibold mb-2">1) Инжест</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="text-sm block mb-1">Добавить текст</label>
+            <input id="title" class="w-full border rounded px-2 py-1 mb-1" placeholder="Название документа">
+            <textarea id="text" rows="4" class="w-full border rounded px-2 py-1" placeholder="Вставьте текст..."></textarea>
+            <button class="mt-2 px-3 py-1.5 rounded bg-indigo-600 text-white" onclick="ingestText()">Добавить</button>
+          </div>
+          <div>
+            <label class="text-sm block mb-1">Загрузить файлы (txt/md/pdf)</label>
+            <input id="files" type="file" multiple class="w-full border rounded px-2 py-1">
+            <button class="mt-2 px-3 py-1.5 rounded bg-indigo-600 text-white" onclick="ingestFiles()">Загрузить</button>
+          </div>
+          <div class="text-xs text-slate-500">Пакетная обработка: <input id="folder" class="border rounded px-2 py-1" placeholder="data/docs"> <button class="px-2 py-1 rounded bg-slate-800 text-white" onclick="ingestFolder()">Импорт папки</button></div>
+        </div>
+      </section>
+
+      <section class="bg-white rounded-2xl shadow p-4 lg:col-span-2">
+        <h2 class="font-semibold mb-2">2) Вопрос (Multi‑Agent) + фильтр по сущностям</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 mb-2">
+          <input id="q" class="border rounded px-3 py-2 lg:col-span-2" placeholder="Например: Итоги квартального отчёта ACME">
+          <input id="entities" class="border rounded px-3 py-2" placeholder="Фильтр сущностей (через запятую)">
+        </div>
+        <div class="flex gap-2 mb-3">
+          <button class="px-4 py-2 rounded bg-emerald-600 text-white" onclick="ask()">Спросить</button>
+          <button class="px-4 py-2 rounded bg-slate-800 text-white" onclick="search()">Поиск</button>
+        </div>
+        <div id="out" class="space-y-4">
+          <div class="p-3 rounded bg-slate-100"><div class="text-xs text-slate-500">План</div><pre id="plan" class="mono text-sm whitespace-pre-wrap"></pre></div>
+          <div class="p-3 rounded bg-slate-100"><div class="text-xs text-slate-500">Ответ</div><div id="answer" class="prose max-w-none"></div></div>
+          <div class="p-3 rounded bg-slate-100"><div class="text-xs text-slate-500">Критика</div><pre id="critique" class="mono text-sm whitespace-pre-wrap"></pre></div>
+          <div class="p-3 rounded bg-slate-100"><div class="text-xs text-slate-500">Источники</div><ul id="cites" class="list-disc pl-5 text-sm"></ul></div>
+          <div class="p-3 rounded bg-slate-100"><div class="text-xs text-slate-500">Матчи поиска</div><ul id="hits" class="list-disc pl-5 text-sm"></ul></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="mt-6 bg-white rounded-2xl shadow p-4">
+      <h2 class="font-semibold mb-2">3) Профили задач</h2>
+      <div class="text-sm text-slate-600 mb-2">Выберите профиль — подставим промпт LangExtract и примеры.</div>
+      <div class="flex gap-2 mb-3">
+        <select id="profile" class="border rounded px-2 py-2"></select>
+        <button class="px-3 py-2 rounded bg-violet-600 text-white" onclick="applyProfile()">Применить</button>
+      </div>
+      <textarea id="lx_prompt" rows="4" class="w-full border rounded px-2 py-1" placeholder="Промпт для LangExtract"></textarea>
+    </section>
+
+    <section class="mt-6 bg-white rounded-2xl shadow p-4">
+      <h2 class="font-semibold mb-2">4) LangExtract: запуск и стрим прогресса</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm block mb-1">Текст для извлечения</label>
+          <textarea id="lx_text" rows="6" class="w-full border rounded px-2 py-1" placeholder="Вставьте текст..."></textarea>
+          <div class="flex gap-2 mt-2">
+            <button class="px-3 py-1.5 rounded bg-violet-600 text-white" onclick="runLEText()">Запустить (без стрима)</button>
+            <button class="px-3 py-1.5 rounded bg-violet-800 text-white" onclick="runLETextStream()">Стрим прогресса</button>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-500 mb-1">Статус</div>
+          <ul id="progress" class="text-sm space-y-1"></ul>
+          <div class="mt-2 text-xs text-slate-500">Первые результаты:</div>
+          <pre id="lx_out" class="mono text-sm whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+    </section>
+  </div>
+
+<script>
+const API = new URLSearchParams(location.search).get('api') || (window.API_BASE || 'http://localhost:8000');
+console.log('🔧 API Base URL:', API);
+document.getElementById('apiBase').textContent = API;
+
+let PROFILES = [];
+async function loadProfiles(){
+  const r = await fetch(API + '/profiles'); PROFILES = await r.json();
+  const sel = document.getElementById('profile'); sel.innerHTML = '';
+  PROFILES.forEach(p => { const o = document.createElement('option'); o.value=p.id; o.textContent=p.title; sel.appendChild(o); });
+}
+function applyProfile(){
+  const id = document.getElementById('profile').value;
+  const p = PROFILES.find(x=>x.id===id); if(!p) return;
+  document.getElementById('lx_prompt').value = p.prompt || '';
+  alert('Профиль применён: ' + p.title);
+}
+
+async function ingestText(){
+  const title = document.getElementById('title').value || 'doc';
+  const text = document.getElementById('text').value || '';
+  if(!text.trim()) return alert('Вставьте текст');
+  const fd = new FormData(); fd.append('title', title); fd.append('text', text);
+  const r = await fetch(API + '/ingest/text', {method:'POST', body: fd});
+  const j = await r.json(); alert('OK: ' + j.doc_id);
+}
+async function ingestFiles(){
+  const files = document.getElementById('files').files; if(!files.length) return alert('Выберите файлы');
+  const fd = new FormData(); for(const f of files) fd.append('files', f);
+  const r = await fetch(API + '/ingest/files', {method:'POST', body: fd}); const j = await r.json(); alert('Загружено: ' + j.count);
+}
+async function ingestFolder(){
+  const path = document.getElementById('folder').value || 'data/docs';
+  const fd = new FormData(); fd.append('path', path);
+  const r = await fetch(API + '/ingest/folder', {method:'POST', body: fd});
+  const j = await r.json(); alert('Импортировано');
+}
+
+async function search(){
+  const q = document.getElementById('q').value || ''; const ents = document.getElementById('entities').value || '';
+  const r = await fetch(API + '/search?q=' + encodeURIComponent(q) + '&entities=' + encodeURIComponent(ents));
+  const j = await r.json(); const ul = document.getElementById('hits'); ul.innerHTML = '';
+  j.forEach(h=>{ const li=document.createElement('li'); li.textContent=h.doc_id + ' (score ' + h.score.toFixed(2)+')'; ul.appendChild(li); });
+}
+async function ask(){
+  const q = document.getElementById('q').value || ''; const ents = document.getElementById('entities').value || '';
+  const r = await fetch(API + '/ask?q=' + encodeURIComponent(q) + '&entities=' + encodeURIComponent(ents));
+  const j = await r.json();
+  document.getElementById('plan').textContent = j.plan || '';
+  document.getElementById('answer').textContent = j.answer || '';
+  document.getElementById('critique').textContent = j.critique || '';
+  const ul = document.getElementById('cites'); ul.innerHTML = '';
+  (j.citations || []).forEach(c => { const li=document.createElement('li'); li.textContent=c; ul.appendChild(li); });
+}
+
+async function runLEText(){
+  const text = document.getElementById('lx_text').value || ''; const prompt = document.getElementById('lx_prompt').value || '';
+  if(!text.trim()) return alert('Вставьте текст');
+  const fd = new FormData(); fd.append('text', text); fd.append('task_prompt', prompt); fd.append('doc_id','demo_doc');
+  const r = await fetch(API + '/langextract/text', {method:'POST', body: fd}); const j = await r.json();
+  document.getElementById('lx_out').textContent = JSON.stringify(j.items.slice(0,20), null, 2);
+  window.open(API + '/extracts/' + j.job_id + '/viz.html', '_blank');
+}
+
+async function runLETextStream(){
+  const text = document.getElementById('lx_text').value || ''; const prompt = document.getElementById('lx_prompt').value || '';
+  if(!text.trim()) return alert('Вставьте текст');
+  const list = document.getElementById('progress'); list.innerHTML='';
+  function push(msg){ const li=document.createElement('li'); li.textContent=msg; list.appendChild(li); }
+  const es = new EventSource(API + '/langextract/stream_text?text=' + encodeURIComponent(text) + '&task_prompt=' + encodeURIComponent(prompt) + '&doc_id=demo_doc');
+  es.onmessage = (e)=>{
+    try{
+      const ev = JSON.parse(e.data);
+      if(ev.event==='done'){ document.getElementById('lx_out').textContent = JSON.stringify(ev.result.items.slice(0,20), null, 2); window.open(API + '/extracts/' + ev.result.job_id + '/viz.html', '_blank'); es.close(); push('Готово'); }
+      else{ push(ev.event + (ev.msg?': '+ev.msg:'')); }
+    }catch(err){ console.error(err); }
+  };
+  es.onerror = (e)=>{ push('Ошибка стрима'); es.close(); };
+}
+
+loadProfiles();
+</script>
+</body>
+</html>
