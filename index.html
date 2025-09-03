@@ -16,13 +16,23 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <section class="bg-white rounded-2xl shadow p-4 lg:col-span-1">
-        <h2 class="font-semibold mb-2">1) Инжест</h2>
+        <h2 class="font-semibold mb-2">1) Управление знаниями</h2>
+        <div class="mb-3 text-xs bg-blue-50 p-2 rounded">
+          <strong>Источники данных:</strong><br/>
+          📄 Загруженные документы: <span id="docs_count">0</span><br/>
+          🧠 Извлеченные сущности: <span id="entities_count">0</span>
+        </div>
         <div class="space-y-3">
           <div>
             <label class="block text-sm font-medium mb-1">Текст:</label>
             <textarea id="text" class="w-full border rounded-lg p-2 text-sm h-20" placeholder="Вставьте документ..."></textarea>
           </div>
-          <button onclick="ingestText()" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all duration-200 text-sm transform active:scale-95">Добавить в корпус</button>
+          <button onclick="ingestText()" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all duration-200 text-sm transform active:scale-95">
+            📚 Добавить + Извлечь сущности
+          </button>
+          <div class="text-xs text-slate-500 mt-1">
+            Автоматически извлекает людей, компании, места из текста
+          </div>
           <div>
             <label class="block text-sm font-medium mb-1">Путь к папке:</label>
             <input id="folder" class="w-full border rounded-lg p-2 text-sm" placeholder="data/docs" value="data/docs">
@@ -124,19 +134,22 @@
   </div>
 
 <script>
-// Определение базового URL API
-let API = 'http://localhost:8000';
+// Определение базового URL API - ВСЕГДА используем Railway для демо
+let API = 'https://multiagentragle-production.up.railway.app';
 
-// Проверяем параметры URL для динамической настройки API
+// Проверяем параметры URL для кастомной настройки API
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('api')) {
   API = urlParams.get('api');
 } else if (window.API_BASE) {
   API = window.API_BASE;
-} else if (window.location.hostname.includes('github.io')) {
-  // Для GitHub Pages - используем Railway URL
-  API = 'https://multiagentragle-production.up.railway.app';
+} else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  // Только для локальной разработки используем localhost
+  API = 'http://localhost:8000';
 }
+
+console.log('API URL determined:', API);
+console.log('Current hostname:', window.location.hostname);
 
 document.getElementById('apiBase').textContent = API;
 
@@ -164,32 +177,61 @@ async function ingestText(){
   if(!text.trim()) return alert('Введите текст');
   
   const btn = event.target;
-  const originalText = btn.textContent;
+  const originalText = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = 'Загружаю...';
   
   try {
-    const fd = new FormData(); 
-    fd.append('text', text); 
-    fd.append('doc_id', 'user_doc_' + Date.now());
-    const r = await fetch(API + '/ingest/text', {method:'POST', body: fd});
+    // Шаг 1: Загружаем документ
+    btn.innerHTML = '📚 Загружаю документ...';
+    const fd1 = new FormData(); 
+    fd1.append('text', text); 
+    fd1.append('doc_id', 'user_doc_' + Date.now());
+    const r1 = await fetch(API + '/ingest/text', {method:'POST', body: fd1});
     
-    if (!r.ok) throw new Error('Ошибка сервера');
+    if (!r1.ok) throw new Error('Ошибка загрузки документа');
     
-    const j = await r.json(); 
-    btn.textContent = '✅ Импортировано!';
+    // Шаг 2: Извлекаем сущности
+    btn.innerHTML = '🧠 Извлекаю сущности...';
+    const fd2 = new FormData();
+    fd2.append('text', text);
+    fd2.append('task_prompt', 'Извлеки людей, компании, места, события и даты');
+    fd2.append('doc_id', 'extracted_' + Date.now());
+    
+    const r2 = await fetch(API + '/langextract/text', {method:'POST', body: fd2});
+    if (r2.ok) {
+      const j2 = await r2.json();
+      const entitiesCount = j2.items ? j2.items.length : 0;
+      document.getElementById('entities_count').textContent = entitiesCount;
+    }
+    
+    // Обновляем счетчик документов
+    updateDocCount();
+    
+    btn.innerHTML = '✅ Готово! Документ + сущности';
     setTimeout(() => {
-      btn.textContent = originalText;
+      btn.innerHTML = originalText;
       btn.disabled = false;
-    }, 2000);
+    }, 3000);
     
   } catch (error) {
-    btn.textContent = '❌ Ошибка';
+    btn.innerHTML = '❌ Ошибка';
     setTimeout(() => {
-      btn.textContent = originalText;
+      btn.innerHTML = originalText;
       btn.disabled = false;
     }, 2000);
-    alert('Ошибка загрузки: ' + error.message);
+    alert('Ошибка: ' + error.message);
+  }
+}
+
+async function updateDocCount() {
+  try {
+    const r = await fetch(API + '/stats');
+    if (r.ok) {
+      const stats = await r.json();
+      document.getElementById('docs_count').textContent = stats.documents || '?';
+    }
+  } catch (error) {
+    console.log('Не удалось получить статистику');
   }
 }
 
