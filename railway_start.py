@@ -6,6 +6,21 @@ import os
 import sys
 from pathlib import Path
 
+# --- ОТЛАДКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ ---
+print("="*50)
+print("🔍 DEBUG: Checking Environment Variables on Railway...")
+all_vars = os.environ
+if "OPENAI_API_KEY" in all_vars:
+    print("✅ OPENAI_API_KEY is available!")
+    # Печатаем первые 8 и последние 4 символа для проверки
+    key = all_vars["OPENAI_API_KEY"]
+    print(f"   Value: {key[:8]}...{key[-4:]}")
+else:
+    print("❌ CRITICAL: OPENAI_API_KEY is NOT FOUND in environment variables.")
+print("="*50)
+# --- КОНЕЦ ОТЛАДКИ ---
+
+
 print("🔍 Railway Debug Start")
 print("=" * 50)
 
