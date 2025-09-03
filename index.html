@@ -38,6 +38,14 @@
           <div class="text-xs text-slate-500">
             ✨ Автоматически извлекает людей, компании, места из текста
           </div>
+          
+          <div class="border-t pt-3 mt-3">
+            <label class="block text-sm font-medium mb-1">Или загрузить из файла:</label>
+            <input type="file" id="file_input" class="w-full text-xs border rounded p-1">
+            <button onclick="loadFileAsText()" class="w-full mt-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 active:bg-gray-800 transition-all duration-200 text-sm transform active:scale-95">
+              📂 Прочитать файл
+            </button>
+          </div>
         </div>
       </section>
 
@@ -158,6 +166,28 @@ async function ingestText(){
       btn.disabled = false;
     }, 3000);
   }
+}
+
+async function loadFileAsText() {
+  const fileInput = document.getElementById('file_input');
+  if (fileInput.files.length === 0) {
+    alert('Пожалуйста, выберите файл.');
+    return;
+  }
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+
+  reader.onload = function(event) {
+    const text = event.target.result;
+    document.getElementById('text').value = text;
+    alert('✅ Текст из файла "' + file.name + '" загружен! Теперь нажмите "Добавить + Извлечь сущности".');
+  };
+
+  reader.onerror = function() {
+    alert('❌ Не удалось прочитать файл.');
+  };
+
+  reader.readAsText(file);
 }
 
 async function ask(){
