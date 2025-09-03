@@ -49,8 +49,12 @@ class HybridCorpus:
         chroma_path = os.path.join(data_dir, "chroma_db")
         self.client = chromadb.PersistentClient(path=chroma_path)
         
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable not set!")
+
         openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-            api_key=os.environ.get("OPENAI_API_KEY"),
+            api_key=api_key,
             model_name=os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
         )
         
