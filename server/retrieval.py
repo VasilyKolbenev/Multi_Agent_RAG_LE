@@ -1,5 +1,5 @@
 import os, re
-from typing import List, Tuple, Optional, Set
+from typing import List, Tuple, Optional, Set, Dict, Any
 from rank_bm25 import BM25Okapi
 
 DOCS_DIR = os.environ.get("DOCS_DIR", "data/docs")
@@ -71,3 +71,19 @@ class Corpus:
             if len(out) >= k:
                 break
         return out
+
+    def list_docs(self) -> List[Dict[str, Any]]:
+        """Возвращает список загруженных документов с метаданными."""
+        return [
+            {"doc_id": doc_id, "text_preview": text[:100] + "...", "text_length": len(text)}
+            for doc_id, text in self.docs
+        ]
+
+    def delete_doc(self, doc_id: str) -> bool:
+        """Удаляет документ по его ID."""
+        initial_len = len(self.docs)
+        self.docs = [doc for doc in self.docs if doc[0] != doc_id]
+        if len(self.docs) < initial_len:
+            self._reindex()
+            return True
+        return False

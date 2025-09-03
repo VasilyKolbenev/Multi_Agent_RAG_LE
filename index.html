@@ -96,6 +96,29 @@
         </div>
       </section>
     </div>
+
+    <section class="bg-white rounded-2xl shadow p-4 mt-6">
+      <h2 class="font-semibold mb-2">🗄️ Управление Базой Знаний</h2>
+      <div class="flex items-center mb-2">
+          <button onclick="fetchDocuments()" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded transition-all transform active:scale-95">🔄 Обновить</button>
+      </div>
+      <div id="kb-list-container" class="max-h-64 overflow-y-auto border rounded-lg">
+          <table id="kb-table" class="min-w-full text-sm hidden">
+              <thead class="bg-gray-50">
+                  <tr>
+                      <th class="px-4 py-2 text-left font-medium text-gray-600">ID Документа</th>
+                      <th class="px-4 py-2 text-left font-medium text-gray-600">Превью</th>
+                      <th class="px-4 py-2 text-left font-medium text-gray-600">Длина</th>
+                      <th class="px-4 py-2 text-left font-medium text-gray-600">Действия</th>
+                  </tr>
+              </thead>
+              <tbody id="kb-list" class="bg-white divide-y divide-gray-200">
+                  <!-- Rows will be added here dynamically -->
+              </tbody>
+          </table>
+          <p id="kb-empty-state" class="p-4 text-sm text-gray-500">База знаний пуста. Добавьте документы, чтобы начать.</p>
+      </div>
+    </section>
   </div>
 
 <script>
@@ -128,6 +151,7 @@ async function checkAPI() {
 }
 
 checkAPI();
+fetchDocuments();
 
 async function ingestText(){
   const text = document.getElementById('text').value || ''; 
@@ -159,6 +183,8 @@ async function ingestText(){
       document.getElementById('entities_count').textContent = entitiesCount;
     }
     
+    fetchDocuments(); // Обновляем список документов
+    
     btn.innerHTML = '✅ Готово! Документ + сущности добавлены';
     setTimeout(() => {
       btn.innerHTML = originalText;
@@ -172,6 +198,65 @@ async function ingestText(){
       btn.disabled = false;
     }, 3000);
   }
+}
+
+async function fetchDocuments() {
+    try {
+        const response = await fetch(API + '/documents');
+        if (!response.ok) throw new Error('Не удалось загрузить список документов');
+
+        const documents = await response.json();
+        const kbList = document.getElementById('kb-list');
+        const kbTable = document.getElementById('kb-table');
+        const kbEmptyState = document.getElementById('kb-empty-state');
+        kbList.innerHTML = ''; // Clear old list
+
+        if (documents.length > 0) {
+            kbTable.classList.remove('hidden');
+            kbEmptyState.classList.add('hidden');
+            documents.forEach(doc => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-4 py-2 whitespace-nowrap font-mono text-xs">${doc.doc_id}</td>
+                    <td class="px-4 py-2 text-gray-500 truncate" style="max-width: 300px;" title="${doc.text_preview}">${doc.text_preview}</td>
+                    <td class="px-4 py-2 whitespace-nowrap">${doc.text_length}</td>
+                    <td class="px-4 py-2 whitespace-nowrap">
+                        <button onclick="deleteDocument('${doc.doc_id}')" class="text-red-600 hover:text-red-900 text-xs font-medium">Удалить</button>
+                    </td>
+                `;
+                kbList.appendChild(row);
+            });
+        } else {
+            kbTable.classList.add('hidden');
+            kbEmptyState.classList.remove('hidden');
+        }
+        
+        // Update the count in the ingest panel
+        document.getElementById('docs_count').textContent = documents.length;
+
+    } catch (error) {
+        console.error('Ошибка при загрузке документов:', error);
+    }
+}
+
+async function deleteDocument(docId) {
+    if (!confirm(`Вы уверены, что хотите удалить документ "${docId}"? Это действие необратимо.`)) {
+        return;
+    }
+    try {
+        const response = await fetch(`${API}/documents/${docId}`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok) throw new Error('Не удалось удалить документ');
+        
+        console.log(`Документ ${docId} удален.`);
+        fetchDocuments(); // Refresh the list after deleting
+    } catch (error) {
+        console.error('Ошибка при удалении документа:', error);
+        alert('Не удалось удалить документ: ' + error.message);
+    }
 }
 
 async function loadFileAsText() {

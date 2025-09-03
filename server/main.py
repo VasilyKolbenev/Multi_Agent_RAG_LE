@@ -99,6 +99,20 @@ async def ask_stream(q: str, k: int = 5, entities: Optional[str] = None):
 
     return EventSourceResponse(event_generator())
 
+@app.get("/documents")
+def get_documents():
+    """Возвращает список всех загруженных документов."""
+    return JSONResponse(corpus.list_docs())
+
+@app.delete("/documents/{doc_id}")
+def delete_document(doc_id: str):
+    """Удаляет документ по его ID."""
+    success = corpus.delete_doc(doc_id)
+    if success:
+        return JSONResponse({"status": "ok", "message": f"Document {doc_id} deleted."})
+    else:
+        return JSONResponse({"status": "error", "message": f"Document {doc_id} not found."}, status_code=404)
+
 @app.post("/langextract/text")
 async def langextract_text(task_prompt: str = Form(None), text: str = Form(...), doc_id: str = Form("extracted_doc")):
     out = run_extraction(text, prompt=task_prompt)
