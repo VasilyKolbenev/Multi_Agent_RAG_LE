@@ -17,7 +17,22 @@ from .langx import run_extraction, stream_extraction
 from .profiles import PROFILES
 
 app = FastAPI(title="MultiAgent-RAG Pro")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+# Настройка CORS для конкретных доменов
+origins = [
+    "https://vasilykolbenev.github.io",  # Ваш GitHub Pages
+    "http://localhost:8001",           # Локальный сервер для тестов
+    "http://localhost",                # На всякий случай
+    "null",                            # Для локальных файлов (file://)
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 corpus = Corpus()
 corpus.load_folder()
@@ -25,7 +40,7 @@ graph = GraphIndex()
 agent = MultiAgent(corpus, graph)
 
 @app.get("/health")
-def health(): return {"status":"ok"}
+def health(): return {"ok": True, "model": os.getenv("LLM_MODEL","gpt-5-mini")}
 
 @app.get("/profiles")
 def profiles(): return PROFILES
@@ -97,7 +112,13 @@ async def ask_stream(q: str, k: int = 5, entities: Optional[str] = None):
             # Также логируем ошибку на сервере
             print(f"Error during stream: {e}")
 
-    return EventSourceResponse(event_generator())
+    return EventSourceResponse(
+        event_generator(),
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 @app.get("/documents")
 def get_documents():

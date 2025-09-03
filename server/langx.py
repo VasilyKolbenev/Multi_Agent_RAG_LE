@@ -27,7 +27,17 @@ def run_extraction(text_or_url: str, prompt: Optional[str]=None, examples: Optio
                 extractions=[lx.data.Extraction(extraction_class=it.get("class","entity"), extraction_text=it.get("text",""), attributes=it.get("attributes",{}))
                              for it in e.get("extractions",[])]
              ) for e in examples]
-    result = lx.extract(text_or_documents=text_or_url, prompt_description=prompt, examples=ex, model_id=MODEL_ID)
+
+    result = lx.extract(
+        text_or_documents=text_or_url,
+        prompt_description=prompt,
+        examples=ex,
+        model_id=os.getenv("LX_MODEL_ID", "openai:gpt-5-mini"),
+        api_key=os.getenv("OPENAI_API_KEY"),
+        fence_output=True,
+        use_schema_constraints=False,
+    )
+    
     job_id = uuid.uuid4().hex[:8]
     out_dir = os.path.join("data", "extracts", job_id); os.makedirs(out_dir, exist_ok=True)
     lx.io.save_annotated_documents([result], output_name="result.jsonl", output_dir=out_dir)
