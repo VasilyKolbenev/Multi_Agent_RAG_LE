@@ -67,6 +67,10 @@
               <strong>Критика:</strong>
               <div id="critique" class="bg-slate-100 p-2 rounded text-xs mono whitespace-pre-wrap"></div>
             </div>
+            <div class="mb-2">
+              <strong>Извлеченные сущности:</strong>
+              <div id="extracted_entities" class="bg-blue-50 p-2 rounded text-xs mono whitespace-pre-wrap"></div>
+            </div>
             <div>
               <strong>Цитаты:</strong>
               <ul id="cites" class="mt-1 space-y-1"></ul>
@@ -172,6 +176,12 @@ async function ask(){
   document.getElementById('plan').textContent = j.plan || '';
   document.getElementById('answer').textContent = j.answer || '';
   document.getElementById('critique').textContent = j.critique || '';
+  
+  // Показываем извлеченные сущности
+  const extractedEntities = j.extracted_entities || [];
+  document.getElementById('extracted_entities').textContent = extractedEntities.length > 0 ? 
+    'Найдено: ' + extractedEntities.join(', ') : 'Сущности не извлечены';
+  
   const ul = document.getElementById('cites'); ul.innerHTML = '';
   (j.citations || []).forEach(c => { const li=document.createElement('li'); li.textContent=c; ul.appendChild(li); });
 }
