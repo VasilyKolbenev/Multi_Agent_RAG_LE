@@ -22,7 +22,7 @@
             <label class="block text-sm font-medium mb-1">Текст:</label>
             <textarea id="text" class="w-full border rounded-lg p-2 text-sm h-20" placeholder="Вставьте документ..."></textarea>
           </div>
-          <button onclick="ingestText()" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">Добавить в корпус</button>
+          <button onclick="ingestText()" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all duration-200 text-sm transform active:scale-95">Добавить в корпус</button>
           <div>
             <label class="block text-sm font-medium mb-1">Путь к папке:</label>
             <input id="folder" class="w-full border rounded-lg p-2 text-sm" placeholder="data/docs" value="data/docs">
@@ -42,7 +42,7 @@
             <label class="block text-sm font-medium mb-1">Сущности (через запятую):</label>
             <input id="entities" class="w-full border rounded-lg p-2 text-sm" placeholder="person, company, event">
           </div>
-          <button onclick="search()" class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm">Найти документы</button>
+          <button onclick="search()" class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 active:bg-purple-800 transition-all duration-200 text-sm transform active:scale-95">Найти документы</button>
           <div class="text-xs text-slate-500">
             <strong>Результаты:</strong>
             <ul id="hits" class="mt-1 space-y-1"></ul>
@@ -53,7 +53,7 @@
       <section class="bg-white rounded-2xl shadow p-4 lg:col-span-1">
         <h2 class="font-semibold mb-2">3) Мультиагентный RAG</h2>
         <div class="space-y-3">
-          <button onclick="ask()" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 text-sm">Задать вопрос</button>
+          <button id="askBtn" onclick="ask()" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 active:bg-red-800 transition-all duration-200 text-sm transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">Задать вопрос</button>
           <div id="thinking" class="mt-2 hidden">
             <div class="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs">
               <div class="flex items-center">
@@ -99,8 +99,8 @@
             <input id="lx_prompt" class="w-full border rounded-lg p-2 text-sm" placeholder="Извлеки людей, компании и события">
           </div>
           <div class="flex gap-2 mt-2">
-            <button onclick="runLEText()" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm">Извлечь сущности</button>
-            <button onclick="runLETextStream()" class="flex-1 bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 text-sm">Стрим</button>
+            <button onclick="runLEText()" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition-all duration-200 text-sm transform active:scale-95">Извлечь сущности</button>
+            <button onclick="runLETextStream()" class="flex-1 bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 active:bg-indigo-700 transition-all duration-200 text-sm transform active:scale-95">Стрим</button>
           </div>
         </div>
         <div>
@@ -160,10 +160,37 @@ async function checkAPI() {
 checkAPI();
 
 async function ingestText(){
-  const text = document.getElementById('text').value || ''; if(!text.trim()) return alert('Введите текст');
-  const fd = new FormData(); fd.append('text', text); fd.append('doc_id', 'user_doc_' + Date.now());
-  const r = await fetch(API + '/ingest/text', {method:'POST', body: fd});
-  const j = await r.json(); alert('Импортировано');
+  const text = document.getElementById('text').value || ''; 
+  if(!text.trim()) return alert('Введите текст');
+  
+  const btn = event.target;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Загружаю...';
+  
+  try {
+    const fd = new FormData(); 
+    fd.append('text', text); 
+    fd.append('doc_id', 'user_doc_' + Date.now());
+    const r = await fetch(API + '/ingest/text', {method:'POST', body: fd});
+    
+    if (!r.ok) throw new Error('Ошибка сервера');
+    
+    const j = await r.json(); 
+    btn.textContent = '✅ Импортировано!';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 2000);
+    
+  } catch (error) {
+    btn.textContent = '❌ Ошибка';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 2000);
+    alert('Ошибка загрузки: ' + error.message);
+  }
 }
 
 async function ingestFolder(){
@@ -184,48 +211,79 @@ async function ask(){
   if(!q.trim()) return alert('Введите вопрос');
   
   const ents = document.getElementById('entities').value || '';
+  const askBtn = document.getElementById('askBtn');
   
-  // Показываем процесс мышления
+  // Отключаем кнопку и показываем процесс мышления
+  askBtn.disabled = true;
+  askBtn.textContent = 'Обрабатываю...';
+  
   const thinking = document.getElementById('thinking');
   const thinkingStatus = document.getElementById('thinking_status');
   thinking.classList.remove('hidden');
+  thinking.style.display = 'block'; // Принудительно показываем
   
   // Очищаем предыдущие результаты
-  document.getElementById('plan').textContent = '';
-  document.getElementById('answer').textContent = '';
-  document.getElementById('critique').textContent = '';
-  document.getElementById('extracted_entities').textContent = '';
+  document.getElementById('plan').textContent = 'Обрабатывается...';
+  document.getElementById('answer').textContent = 'Ожидание ответа...';
+  document.getElementById('critique').textContent = 'Анализируется...';
+  document.getElementById('extracted_entities').textContent = 'Извлекаются сущности...';
   document.getElementById('cites').innerHTML = '';
   
   try {
+    // Этап 1
     thinkingStatus.textContent = '🔍 Извлекаю сущности из вопроса...';
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 800));
     
-    thinkingStatus.textContent = '📚 Ищу релевантные документы...';
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Этап 2
+    thinkingStatus.textContent = '📚 Ищу релевантные документы в базе...';
+    await new Promise(resolve => setTimeout(resolve, 800));
     
+    // Этап 3
     thinkingStatus.textContent = '🤖 Генерирую ответ с помощью ИИ...';
+    await new Promise(resolve => setTimeout(resolve, 500));
     
+    // Отправляем запрос
     const r = await fetch(API + '/ask?q=' + encodeURIComponent(q) + '&entities=' + encodeURIComponent(ents));
+    
+    if (!r.ok) throw new Error('Ошибка сервера: ' + r.status);
+    
     const j = await r.json();
     
+    // Скрываем индикатор мышления
     thinking.classList.add('hidden');
     
-    document.getElementById('plan').textContent = j.plan || '';
-    document.getElementById('answer').textContent = j.answer || '';
-    document.getElementById('critique').textContent = j.critique || '';
+    // Показываем результаты
+    document.getElementById('plan').textContent = j.plan || 'План не сгенерирован';
+    document.getElementById('answer').textContent = j.answer || 'Ответ не получен';
+    document.getElementById('critique').textContent = j.critique || 'Критика недоступна';
     
     // Показываем извлеченные сущности
     const extractedEntities = j.extracted_entities || [];
     document.getElementById('extracted_entities').textContent = extractedEntities.length > 0 ? 
-      '🎯 Найдено: ' + extractedEntities.join(', ') : '❌ Сущности не извлечены';
+      '🎯 Найдено: ' + extractedEntities.join(', ') : '❌ Сущности не извлечены (возможно, демо-режим)';
     
+    // Показываем цитаты
     const ul = document.getElementById('cites'); ul.innerHTML = '';
-    (j.citations || []).forEach(c => { const li=document.createElement('li'); li.textContent='📄 ' + c; ul.appendChild(li); });
+    if (j.citations && j.citations.length > 0) {
+      j.citations.forEach(c => { 
+        const li=document.createElement('li'); 
+        li.textContent='📄 ' + c; 
+        ul.appendChild(li); 
+      });
+    } else {
+      const li=document.createElement('li'); 
+      li.textContent='📄 Нет цитат'; 
+      ul.appendChild(li);
+    }
     
   } catch (error) {
     thinking.classList.add('hidden');
-    alert('Ошибка: ' + error.message);
+    document.getElementById('answer').textContent = 'Ошибка: ' + error.message;
+    console.error('Ошибка запроса:', error);
+  } finally {
+    // Восстанавливаем кнопку
+    askBtn.disabled = false;
+    askBtn.textContent = 'Задать вопрос';
   }
 }
 
