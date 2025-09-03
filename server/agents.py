@@ -118,17 +118,16 @@ class MultiAgent:
         top_hits = reranked_hits[:5] # Берем топ-5 для контекста
         yield {"type": "rerank_details", "data": {"reranker_model": "gpt-5-mini", "final_context_chunks": len(top_hits)}}
 
-        ctx, cites = "", []
+        ctx = ""
         for chunk in top_hits:
             ctx += f"\n[DOC {chunk['doc_id']} Chunk: {chunk['chunk_id']}] {chunk['text']}"
         
-        # Собираем уникальные doc_id для цитирования
-        unique_doc_ids = list(dict.fromkeys([chunk['doc_id'] for chunk in top_hits]))
+        # Собираем уникальные ID чанков для цитирования
+        chunk_cites = [chunk['chunk_id'] for chunk in top_hits]
 
-        # Передаем полные тексты для модального окна, но теперь это сложнее, т.к. у нас чанки
-        # Пока передадим сами чанки
+        # Передаем сами чанки для модального окна
         full_hits_for_modal = [{"doc_id": h['chunk_id'], "text_content": h['text']} for h in top_hits]
-        yield {"type": "citations", "citations": unique_doc_ids, "hits": full_hits_for_modal}
+        yield {"type": "citations", "citations": chunk_cites, "hits": full_hits_for_modal}
         
         # Шаг 4: Генерация ответа (потоковое)
         async for chunk in self.llm.stream(SYSTEM_WRITER, f"Q: {query}\n\nCONTEXT:\n{ctx}"):

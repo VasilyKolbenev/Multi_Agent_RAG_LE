@@ -430,12 +430,17 @@ async function ask(){
         
         const citations = data.citations || [];
         if (citations.length > 0) {
-          citations.forEach(c => {
+          citations.forEach(chunkId => {
             const li = document.createElement('li');
             const button = document.createElement('button');
             button.className = 'text-blue-600 hover:underline mono text-xs';
-            button.textContent = '📄 ' + c;
-            button.onclick = () => showCitationModal(c);
+            
+            // Форматируем ID для отображения
+            const docId = chunkId.split('_chunk_')[0];
+            const chunkNum = chunkId.split('_chunk_').pop();
+            button.textContent = `📄 ${docId} (Chunk: ${chunkNum})`;
+            
+            button.onclick = () => showCitationModal(chunkId);
             li.appendChild(button);
             citesEl.appendChild(li);
           });
@@ -485,17 +490,10 @@ async function ask(){
   };
 }
 
-function showCitationModal(docId) {
+function showCitationModal(docId) { // docId здесь - это chunkId
     const hit = currentHits.find(h => h.doc_id === docId);
     if (!hit) {
-        // Fallback for parent doc ID if chunk ID not found directly
-        const parentDocId = docId.split('_chunk_')[0];
-        const parentHit = currentHits.find(h => h.doc_id.startsWith(parentDocId));
-        if (parentHit) {
-            showCitationModal(parentHit.doc_id); // Retry with the first chunk's ID
-        } else {
-            alert('Текст для этого источника не найден.');
-        }
+        alert('Текст для этого источника не найден. ID: ' + docId);
         return;
     }
 
