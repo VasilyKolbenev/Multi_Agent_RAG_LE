@@ -57,3 +57,49 @@ class MultiAgent:
             "extracted_entities": extracted_entities,
             "entities_used": entities_filter or []
         }
+
+    async def stream(self, query: str, k: int = 5, entities_filter: Optional[List[str]] = None, auto_extract: bool = True):
+        """Потоковая версия RAG-ответа."""
+        
+        # Шаг 1: Планирование (не потоковое)
+        plan = await self.llm.complete(SYSTEM_PLANNER, query)
+        yield {"type": "plan", "data": plan}
+        
+        # Шаг 2: Извлечение сущностей (не потоковое)
+        extracted_entities = []
+        if auto_extract and not entities_filter:
+            try:
+                extraction_result = run_extraction(query, "Извлеки людей, компании, места, события и даты из этого вопроса")
+                extracted_entities = [item.get("text", "") for item in extraction_result.get("items", []) if item.get("text")]
+                entities_filter = extracted_entities[:10]  # Ограничиваем до 10 сущностей
+            except Exception as e:
+                print(f"Ошибка извлечения сущностей: {e}")
+        
+        yield {"type": "entities", "data": extracted_entities}
+        
+        # Шаг 3: Поиск (не потоковое)
+        allowed_docs: Optional[Set[str]] = None
+        if entities_filter:
+            allowed_docs = self.graph.filter_docs(entities_filter)
+        
+        hits = self.corpus.search(query, k=k, allowed_docs=allowed_docs)
+        ctx, cites = "", []
+        for doc_id, text, score in hits:
+            snippet = text[:1200].replace("\n"," ")
+            ctx += f"\n[DOC {doc_id}] {snippet}"
+            cites.append(doc_id)
+
+        yield {"type": "citations", "data": cites}
+        
+        # Шаг 4: Генерация ответа (потоковое)
+        async for chunk in self.llm.stream(SYSTEM_WRITER, f"Q: {query}\n\nCONTEXT:\n{ctx}"):
+            yield {"type": "answer_chunk", "data": chunk}
+            
+        # Уведомление о завершении потока ответа
+        yield {"type": "answer_done"}
+        
+        # Шаг 5: Критика (не потоковое, выполняется после генерации)
+        # Для этого нужно собрать полный ответ
+        full_answer = "" # Это потребует изменений в логике, пока пропускаем
+        # critique = await self.llm.complete(SYSTEM_CRITIC, f"Ответ: {full_answer}\n\nКонтекст: {ctx}")
+        # yield {"type": "critique", "data": critique}

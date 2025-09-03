@@ -1,17 +1,31 @@
 import os, json, httpx
+import asyncio
 
 class LLM:
-    def __init__(self):
-        self.provider = os.environ.get("LLM_PROVIDER", "openai").lower()
-        self.model = os.environ.get("LLM_MODEL", "gpt-5-mini")
-        self.key = os.environ.get("OPENAI_API_KEY")
+    def __init__(self, model=None, provider=None, key=None):
+        self.model = model or os.environ.get("LLM_MODEL", "gpt-4o-mini")
+        self.provider = provider or os.environ.get("LLM_PROVIDER", "openai")
+        self.key = key or os.environ.get("OPENAI_API_KEY")
 
     async def complete(self, system: str, user: str) -> str:
-        if self.provider == "openai" and self.key:
+        if self.provider == "stub":
+            return self._stub(system, user)
+        elif self.provider == "openai":
             return await self._openai(system, user)
-        if self.provider == "ollama":
-            return await self._ollama(system, user)
-        return self._stub(system, user)
+        else:
+            raise ValueError(f"Unsupported provider: {self.provider}")
+
+    async def stream(self, system: str, user: str):
+        """Асинхронный генератор для потоковой передачи ответа."""
+        if self.provider == "openai":
+            async for chunk in self._openai_stream(system, user):
+                yield chunk
+        else:
+            # Для других провайдеров (или stub) эмулируем поток
+            full_response = await self.complete(system, user)
+            for word in full_response.split():
+                yield word + " "
+                await asyncio.sleep(0.05)
 
     async def _openai(self, system: str, user: str) -> str:
         url = "https://api.openai.com/v1/chat/completions"
@@ -30,6 +44,38 @@ class LLM:
             r.raise_for_status()
             data = r.json()
             return data["choices"][0]["message"]["content"].strip()
+
+    async def _openai_stream(self, system: str, user: str):
+        """Асинхронный генератор для потоковой передачи от OpenAI."""
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"}
+        payload = {
+            "model": self.model,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "stream": True,
+        }
+        if not self.model.startswith("gpt-5"):
+            payload["temperature"] = 0.2
+            payload["max_tokens"] = 2000
+
+        async with httpx.AsyncClient(timeout=60) as client:
+            async with client.stream("POST", url, headers=headers, json=payload) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if line.startswith("data:"):
+                        data_str = line[len("data:"):].strip()
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            data = json.loads(data_str)
+                            if "choices" in data and len(data["choices"]) > 0:
+                                delta = data["choices"][0].get("delta", {})
+                                content = delta.get("content")
+                                if content:
+                                    yield content
+                        except json.JSONDecodeError:
+                            print(f"Failed to decode JSON: {data_str}")
+                            continue
 
     async def _ollama(self, system: str, user: str) -> str:
         async with httpx.AsyncClient(timeout=60) as client:
@@ -50,13 +96,9 @@ class LLM:
             return txt.strip() or "…"
 
     def _stub(self, system: str, user: str) -> str:
-        # Более реалистичные заглушки в зависимости от системного промпта
-        if "Планировщик" in system:
-            return """План выполнения запроса:
-1. Поиск релевантных документов в базе знаний
-2. Анализ найденной информации
-3. Синтез ответа на основе контекста
-4. Проверка качества и релевантности ответа"""
+        # Улучшенный stub для более реалистичных ответов
+        if "планировщик" in system.lower():
+            return "1. Извлечь ключевые сущности из запроса.\n2. Найти релевантные документы.\n3. Синтезировать ответ на основе найденного.\n4. Проверить ответ на фактическую точность."
         
         elif "Писатель" in system:
             return f"""На основе предоставленного контекста отвечаю на вопрос: "{user}"

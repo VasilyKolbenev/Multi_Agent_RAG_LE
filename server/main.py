@@ -75,6 +75,30 @@ async def ask(q: str, k: int = 5, entities: Optional[str] = None):
     append_trace({"type":"result", "q": q, "answer": res.get("answer","")[:200], "citations": res.get("citations", [])})
     return JSONResponse(res)
 
+@app.get("/ask/stream")
+async def ask_stream(q: str, k: int = 5, entities: Optional[str] = None):
+    """Эндпоинт для потоковой передачи RAG-ответа."""
+    ents = [x.strip() for x in entities.split(",")] if entities else None
+    
+    async def event_generator():
+        try:
+            async for event in agent.stream(q, k=k, entities_filter=ents):
+                yield {
+                    "event": "message",
+                    "data": json.dumps(event)
+                }
+        except Exception as e:
+            # Отправляем событие с ошибкой на фронтенд
+            error_event = {"type": "error", "data": f"Произошла ошибка: {e}"}
+            yield {
+                "event": "message",
+                "data": json.dumps(error_event)
+            }
+            # Также логируем ошибку на сервере
+            print(f"Error during stream: {e}")
+
+    return EventSourceResponse(event_generator())
+
 @app.post("/langextract/text")
 async def langextract_text(task_prompt: str = Form(None), text: str = Form(...), doc_id: str = Form("extracted_doc")):
     out = run_extraction(text, prompt=task_prompt)

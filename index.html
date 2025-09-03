@@ -234,48 +234,73 @@ async function ask(){
   askBtn.textContent = '🤔 Обрабатываю...';
   thinking.classList.remove('hidden');
   
-  try {
-    thinkingStatus.textContent = '🔍 Извлекаю сущности из вопроса...';
-    await new Promise(resolve => setTimeout(resolve, 800));
+  // Очистка перед новым запросом
+  const planEl = document.getElementById('plan');
+  const answerEl = document.getElementById('answer');
+  const entitiesEl = document.getElementById('extracted_entities');
+  const citesEl = document.getElementById('cites');
+  
+  planEl.textContent = '';
+  answerEl.textContent = '';
+  entitiesEl.textContent = '';
+  citesEl.innerHTML = '';
+  
+  const ents = document.getElementById('entities')?.value || '';
+  const source = new EventSource(API + '/ask/stream?q=' + encodeURIComponent(q) + '&entities=' + encodeURIComponent(ents));
+
+  source.onmessage = function(event) {
+    const data = JSON.parse(event.data);
     
-    thinkingStatus.textContent = '📚 Ищу релевантные документы...';
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    thinkingStatus.textContent = '🤖 Генерирую ответ с помощью ИИ...';
-    
-    const r = await fetch(API + '/ask?q=' + encodeURIComponent(q));
-    if (!r.ok) throw new Error('Ошибка сервера: ' + r.status);
-    
-    const j = await r.json();
-    thinking.classList.add('hidden');
-    
-    document.getElementById('plan').textContent = j.plan || 'План не сгенерирован';
-    document.getElementById('answer').textContent = j.answer || 'Ответ не получен';
-    
-    const extractedEntities = j.extracted_entities || [];
-    document.getElementById('extracted_entities').textContent = extractedEntities.length > 0 ? 
-      '🎯 Найдено: ' + extractedEntities.join(', ') : '❌ Сущности не извлечены';
-    
-    const ul = document.getElementById('cites'); ul.innerHTML = '';
-    if (j.citations && j.citations.length > 0) {
-      j.citations.forEach(c => { 
-        const li=document.createElement('li'); 
-        li.textContent='📄 ' + c; 
-        ul.appendChild(li); 
-      });
-    } else {
-      const li=document.createElement('li'); 
-      li.textContent='📄 Нет цитат (возможно, нет подходящих документов)'; 
-      ul.appendChild(li);
+    switch (data.type) {
+      case 'plan':
+        thinkingStatus.textContent = '✅ План готов. Извлекаю сущности...';
+        planEl.textContent = data.data;
+        break;
+      case 'entities':
+        thinkingStatus.textContent = '✅ Сущности извлечены. Ищу документы...';
+        entitiesEl.textContent = data.data.length > 0 ? '🎯 Найдено: ' + data.data.join(', ') : '❌ Сущности не найдены';
+        break;
+      case 'citations':
+        thinkingStatus.textContent = '✅ Документы найдены. Генерирую ответ...';
+        if (data.data.length > 0) {
+          data.data.forEach(c => {
+            const li = document.createElement('li');
+            li.textContent = '📄 ' + c;
+            citesEl.appendChild(li);
+          });
+        } else {
+          const li = document.createElement('li');
+          li.textContent = '📄 Подходящие документы не найдены';
+          citesEl.appendChild(li);
+        }
+        break;
+      case 'answer_chunk':
+        answerEl.textContent += data.data;
+        break;
+      case 'answer_done':
+        thinking.classList.add('hidden'); // Скрываем "думалку"
+        source.close(); // Закрываем соединение
+        askBtn.disabled = false;
+        askBtn.textContent = '🚀 Задать вопрос';
+        break;
+      case 'error':
+        answerEl.textContent = '❌ Ошибка: ' + data.data;
+        thinking.classList.add('hidden');
+        source.close();
+        askBtn.disabled = false;
+        askBtn.textContent = '🚀 Задать вопрос';
+        break;
     }
-    
-  } catch (error) {
+  };
+
+  source.onerror = function(err) {
+    console.error("EventSource failed:", err);
+    answerEl.textContent = '❌ Ошибка соединения с сервером. Попробуйте снова.';
     thinking.classList.add('hidden');
-    document.getElementById('answer').textContent = '❌ Ошибка: ' + error.message;
-  } finally {
+    source.close();
     askBtn.disabled = false;
     askBtn.textContent = '🚀 Задать вопрос';
-  }
+  };
 }
 </script>
 
