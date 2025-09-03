@@ -462,7 +462,14 @@ async function ask(){
 function showCitationModal(docId) {
     const hit = currentHits.find(h => h.doc_id === docId);
     if (!hit) {
-        alert('Текст для этого источника не найден.');
+        // Fallback for parent doc ID if chunk ID not found directly
+        const parentDocId = docId.split('_chunk_')[0];
+        const parentHit = currentHits.find(h => h.doc_id.startsWith(parentDocId));
+        if (parentHit) {
+            showCitationModal(parentHit.doc_id); // Retry with the first chunk's ID
+        } else {
+            alert('Текст для этого источника не найден.');
+        }
         return;
     }
 

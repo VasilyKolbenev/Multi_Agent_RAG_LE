@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from .retrieval import Corpus
+from .retrieval import HybridCorpus
 from .graph_index import GraphIndex
 from .agents import MultiAgent
 from .storage import append_trace, read_traces
@@ -34,8 +34,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-corpus = Corpus()
-corpus.load_folder()
+corpus = HybridCorpus()
 graph = GraphIndex()
 agent = MultiAgent(corpus, graph)
 
@@ -75,12 +74,10 @@ async def ingest_folder(path: str = Form(...)):
 
 @app.get("/search")
 def search(q: str, k: int = 5, entities: Optional[str] = None):
-    allowed = None
-    if entities:
-        ents = [x.strip() for x in entities.split(",") if x.strip()]
-        allowed = graph.filter_docs(ents)
-    res = corpus.search(q, k=k, allowed_docs=allowed)
-    return [{"doc_id": d, "score": s} for d,_,s in [(x[0],x[2]) for x in res]]
+    # Фильтрация по сущностям здесь больше не поддерживается напрямую,
+    # так как поиск теперь гибридный. Можно добавить в будущем.
+    res = corpus.search(q, k=k)
+    return JSONResponse(res)
 
 @app.get("/ask")
 async def ask(q: str, k: int = 5, entities: Optional[str] = None):

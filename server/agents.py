@@ -1,8 +1,9 @@
 from typing import Dict, Any, List, Set, Optional
 from .llm import LLM
-from .retrieval import Corpus
+from .retrieval import HybridCorpus
 from .graph_index import GraphIndex
 from .langx import run_extraction
+import re
 
 SYSTEM_PLANNER = (
     "Ты — Планировщик многоагентной системы. Разбей запрос на шаги: retrieval, synthesis, critique. "
@@ -15,8 +16,39 @@ SYSTEM_CRITIC = (
     "Ты — Критик. Проверь ответ на соответствие контексту, дай замечания и уверенности."
 )
 
+async def llm_rerank(query: str, docs: List[Dict[str, Any]], llm: LLM) -> List[Dict[str, Any]]:
+    if not docs:
+        return []
+    prompt = ("Отсортируй следующих кандидатов по релевантности к запросу. "
+              "Верни только numerated list of indices, for example: 1. 3\n2. 1\n3. 0\n4. 2\n\n"
+              f"Запрос: {query}\n\n" +
+              "\n".join(f"[{i}] {d['text'][:700]}" for i, d in enumerate(docs)))
+    
+    try:
+        response = await llm.complete("You are a helpful re-ranking assistant.", prompt)
+        # Извлекаем числа из ответа
+        ranked_indices = [int(i) for i in re.findall(r'\d+', response)]
+        
+        # Проверяем, что все индексы валидны
+        if all(i < len(docs) for i in ranked_indices):
+            # Создаем новый список на основе отсортированных индексов
+            reranked_docs = [docs[i] for i in ranked_indices]
+            # Добавляем оставшиеся документы, которых не было в ответе
+            original_indices = set(range(len(docs)))
+            used_indices = set(ranked_indices)
+            remaining_indices = original_indices - used_indices
+            for i in remaining_indices:
+                reranked_docs.append(docs[i])
+            return reranked_docs
+        else:
+            # Если LLM вернула невалидные индексы, возвращаем исходный порядок
+            return docs
+    except Exception:
+        # В случае ошибки возвращаем исходный порядок
+        return docs
+
 class MultiAgent:
-    def __init__(self, corpus: Corpus, graph: GraphIndex):
+    def __init__(self, corpus: HybridCorpus, graph: GraphIndex):
         self.corpus = corpus
         self.graph = graph
         self.llm = LLM()
@@ -58,7 +90,7 @@ class MultiAgent:
             "entities_used": entities_filter or []
         }
 
-    async def stream(self, query: str, k: int = 5, entities_filter: Optional[List[str]] = None, auto_extract: bool = True):
+    async def stream(self, query: str, k: int = 20, entities_filter: Optional[List[str]] = None, auto_extract: bool = True):
         """Потоковая версия RAG-ответа."""
         
         # Шаг 1: Планирование (не потоковое)
@@ -77,25 +109,29 @@ class MultiAgent:
         
         yield {"type": "entities", "data": extracted_entities}
         
-        # Шаг 3: Поиск (не потоковое)
-        allowed_docs: Optional[Set[str]] = None
-        if entities_filter:
-            allowed_docs = self.graph.filter_docs(entities_filter)
+        # Шаг 3: Гибридный поиск
+        hits = self.corpus.search(query, k=k)
         
-        hits = self.corpus.search(query, k=k, allowed_docs=allowed_docs)
-        ctx, cites = "", []
-        for doc_id, text, score in hits:
-            snippet = text[:1200].replace("\n"," ")
-            ctx += f"\n[DOC {doc_id}] {snippet}"
-            cites.append(doc_id)
+        # Шаг 3.5: LLM Rerank
+        reranked_hits = await llm_rerank(query, hits, self.llm)
+        top_hits = reranked_hits[:5] # Берем топ-5 для контекста
 
-        yield {"type": "citations", "data": cites}
+        ctx, cites = "", []
+        for chunk in top_hits:
+            ctx += f"\n[DOC {chunk['doc_id']} Chunk: {chunk['chunk_id']}] {chunk['text']}"
+        
+        # Собираем уникальные doc_id для цитирования
+        unique_doc_ids = list(dict.fromkeys([chunk['doc_id'] for chunk in top_hits]))
+
+        # Передаем полные тексты для модального окна, но теперь это сложнее, т.к. у нас чанки
+        # Пока передадим сами чанки
+        full_hits_for_modal = [{"doc_id": h['chunk_id'], "text_content": h['text']} for h in top_hits]
+        yield {"type": "citations", "citations": unique_doc_ids, "hits": full_hits_for_modal}
         
         # Шаг 4: Генерация ответа (потоковое)
         async for chunk in self.llm.stream(SYSTEM_WRITER, f"Q: {query}\n\nCONTEXT:\n{ctx}"):
             yield {"type": "answer_chunk", "data": chunk}
             
-        # Уведомление о завершении потока ответа
         yield {"type": "answer_done"}
         
         # Шаг 5: Критика (не потоковое, выполняется после генерации)
