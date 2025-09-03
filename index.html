@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MultiAgent‑RAG Pro v2.0</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    // Указываем путь к 'worker' для pdf.js
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
   <style> .mono{font-family: ui-monospace, Menlo, Consolas, monospace;} </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
@@ -41,7 +46,8 @@
           
           <div class="border-t pt-3 mt-3">
             <label class="block text-sm font-medium mb-1">Или загрузить из файла:</label>
-            <input type="file" id="file_input" class="w-full text-xs border rounded p-1">
+            <input type="file" id="file_input" class="w-full text-xs border rounded p-1" accept=".txt,.md,.pdf">
+            <div class="text-xs text-slate-500 mt-1">Поддерживаются .txt, .md, .pdf</div>
             <button onclick="loadFileAsText()" class="w-full mt-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 active:bg-gray-800 transition-all duration-200 text-sm transform active:scale-95">
               📂 Прочитать файл
             </button>
@@ -170,24 +176,50 @@ async function ingestText(){
 
 async function loadFileAsText() {
   const fileInput = document.getElementById('file_input');
+  const btn = event.target;
+  const originalHTML = btn.innerHTML;
+
   if (fileInput.files.length === 0) {
     alert('Пожалуйста, выберите файл.');
     return;
   }
   const file = fileInput.files[0];
-  const reader = new FileReader();
 
-  reader.onload = function(event) {
-    const text = event.target.result;
+  btn.disabled = true;
+  btn.innerHTML = '🔄 Читаю файл...';
+
+  try {
+    let text = '';
+    if (file.type === 'application/pdf') {
+      const loadingTask = pdfjsLib.getDocument(URL.createObjectURL(file));
+      const pdf = await loadingTask.promise;
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        fullText += pageText + '\n\n';
+      }
+      text = fullText;
+    } else { // Для .txt, .md и других текстовых файлов
+      text = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = event => resolve(event.target.result);
+        reader.onerror = error => reject(error);
+        reader.readAsText(file);
+      });
+    }
+
     document.getElementById('text').value = text;
     alert('✅ Текст из файла "' + file.name + '" загружен! Теперь нажмите "Добавить + Извлечь сущности".');
-  };
 
-  reader.onerror = function() {
-    alert('❌ Не удалось прочитать файл.');
-  };
-
-  reader.readAsText(file);
+  } catch (error) {
+    console.error('Ошибка чтения файла:', error);
+    alert('❌ Не удалось прочитать файл. Убедитесь, что это поддерживаемый формат (.txt, .md, .pdf) и файл не поврежден.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
+  }
 }
 
 async function ask(){
