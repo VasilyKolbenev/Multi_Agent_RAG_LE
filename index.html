@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MultiAgent‑RAG Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style> .mono{font-family: ui-monospace, Menlo, Consolas, monospace;} </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-6xl mx-auto p-6">
+    <header class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-bold">MultiAgent‑RAG Pro</h1>
+      <div class="text-xs text-slate-500">API: <code id="apiBase" class="mono"></code></div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <section class="bg-white rounded-2xl shadow p-4 lg:col-span-1">
+        <h2 class="font-semibold mb-2">1) Инжест</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium mb-1">Текст:</label>
+            <textarea id="text" class="w-full border rounded-lg p-2 text-sm h-20" placeholder="Вставьте документ..."></textarea>
+          </div>
+          <button onclick="ingestText()" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">Добавить в корпус</button>
+          <div>
+            <label class="block text-sm font-medium mb-1">Путь к папке:</label>
+            <input id="folder" class="w-full border rounded-lg p-2 text-sm" placeholder="data/docs" value="data/docs">
+            <button onclick="ingestFolder()" class="w-full mt-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm">Загрузить папку</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-white rounded-2xl shadow p-4 lg:col-span-1">
+        <h2 class="font-semibold mb-2">2) Поиск</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium mb-1">Запрос:</label>
+            <input id="q" class="w-full border rounded-lg p-2 text-sm" placeholder="Поиск по документам...">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Сущности (через запятую):</label>
+            <input id="entities" class="w-full border rounded-lg p-2 text-sm" placeholder="person, company, event">
+          </div>
+          <button onclick="search()" class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm">Найти документы</button>
+          <div class="text-xs text-slate-500">
+            <strong>Результаты:</strong>
+            <ul id="hits" class="mt-1 space-y-1"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-white rounded-2xl shadow p-4 lg:col-span-1">
+        <h2 class="font-semibold mb-2">3) Мультиагентный RAG</h2>
+        <div class="space-y-3">
+          <button onclick="ask()" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 text-sm">Задать вопрос</button>
+          <div class="text-xs">
+            <div class="mb-2">
+              <strong>План:</strong>
+              <div id="plan" class="bg-slate-100 p-2 rounded text-xs mono whitespace-pre-wrap"></div>
+            </div>
+            <div class="mb-2">
+              <strong>Ответ:</strong>
+              <div id="answer" class="bg-slate-100 p-2 rounded text-xs mono whitespace-pre-wrap"></div>
+            </div>
+            <div class="mb-2">
+              <strong>Критика:</strong>
+              <div id="critique" class="bg-slate-100 p-2 rounded text-xs mono whitespace-pre-wrap"></div>
+            </div>
+            <div>
+              <strong>Цитаты:</strong>
+              <ul id="cites" class="mt-1 space-y-1"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="bg-white rounded-2xl shadow p-4 mt-6">
+      <h2 class="font-semibold mb-2">4) LangExtract</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Текст для извлечения:</label>
+          <textarea id="lx_text" class="w-full border rounded-lg p-2 text-sm h-32" placeholder="Введите текст для извлечения сущностей..."></textarea>
+          <div class="mt-2">
+            <label class="block text-sm font-medium mb-1">Промпт (опционально):</label>
+            <input id="lx_prompt" class="w-full border rounded-lg p-2 text-sm" placeholder="Извлеки людей, компании и события">
+          </div>
+          <div class="flex gap-2 mt-2">
+            <button onclick="runLEText()" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm">Извлечь сущности</button>
+            <button onclick="runLETextStream()" class="flex-1 bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 text-sm">Стрим</button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Результат:</label>
+          <pre id="lx_out" class="w-full bg-slate-100 border rounded-lg p-2 text-xs mono h-48 overflow-auto whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow p-4 mt-6">
+      <h2 class="font-semibold mb-2">5) Профили</h2>
+      <div id="profiles" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
+
+    <footer class="mt-6 text-center text-xs text-slate-500">
+      <p>MultiAgent-RAG Pro | Powered by OpenAI GPT-5-mini</p>
+      <p class="mt-1">⚠️ Убедитесь, что бэкенд запущен и доступен по адресу API</p>
+    </footer>
+  </div>
+
+<script>
+// Определение базового URL API
+let API = 'http://localhost:8000';
+
+// Проверяем параметры URL для динамической настройки API
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('api')) {
+  API = urlParams.get('api');
+} else if (window.API_BASE) {
+  API = window.API_BASE;
+} else if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+  // Для GitHub Pages - используем Railway URL
+  API = 'https://multiagentragle-production.up.railway.app';
+}
+
+document.getElementById('apiBase').textContent = API;
+
+// Проверка доступности API
+async function checkAPI() {
+  try {
+    const response = await fetch(API + '/health');
+    if (response.ok) {
+      document.getElementById('apiBase').className = 'mono text-green-600';
+      document.getElementById('apiBase').title = 'API доступно';
+    } else {
+      throw new Error('API недоступно');
+    }
+  } catch (error) {
+    document.getElementById('apiBase').className = 'mono text-red-600';
+    document.getElementById('apiBase').title = 'API недоступно: ' + error.message;
+  }
+}
+
+// Проверяем API при загрузке
+checkAPI();
+
+async function ingestText(){
+  const text = document.getElementById('text').value || ''; if(!text.trim()) return alert('Введите текст');
+  const fd = new FormData(); fd.append('text', text); fd.append('doc_id', 'user_doc_' + Date.now());
+  const r = await fetch(API + '/ingest/text', {method:'POST', body: fd});
+  const j = await r.json(); alert('Импортировано');
+}
+
+async function ingestFolder(){
+  const path = document.getElementById('folder').value || 'data/docs';
+  const fd = new FormData(); fd.append('path', path);
+  const r = await fetch(API + '/ingest/folder', {method:'POST', body: fd});
+  const j = await r.json(); alert('Импортировано');
+}
+
+async function search(){
+  const q = document.getElementById('q').value || ''; const ents = document.getElementById('entities').value || '';
+  const r = await fetch(API + '/search?q=' + encodeURIComponent(q) + '&entities=' + encodeURIComponent(ents));
+  const j = await r.json(); const ul = document.getElementById('hits'); ul.innerHTML = '';
+  j.forEach(h=>{ const li=document.createElement('li'); li.textContent=h.doc_id + ' (score ' + h.score.toFixed(2)+')'; ul.appendChild(li); });
+}
+async function ask(){
+  const q = document.getElementById('q').value || ''; const ents = document.getElementById('entities').value || '';
+  const r = await fetch(API + '/ask?q=' + encodeURIComponent(q) + '&entities=' + encodeURIComponent(ents));
+  const j = await r.json();
+  document.getElementById('plan').textContent = j.plan || '';
+  document.getElementById('answer').textContent = j.answer || '';
+  document.getElementById('critique').textContent = j.critique || '';
+  const ul = document.getElementById('cites'); ul.innerHTML = '';
+  (j.citations || []).forEach(c => { const li=document.createElement('li'); li.textContent=c; ul.appendChild(li); });
+}
+
+async function runLEText(){
+  const text = document.getElementById('lx_text').value || ''; const prompt = document.getElementById('lx_prompt').value || '';
+  if(!text.trim()) return alert('Вставьте текст');
+  const fd = new FormData(); fd.append('text', text); fd.append('task_prompt', prompt); fd.append('doc_id','demo_doc');
+  const r = await fetch(API + '/langextract/text', {method:'POST', body: fd}); const j = await r.json();
+  document.getElementById('lx_out').textContent = JSON.stringify(j.items.slice(0,20), null, 2);
+  window.open(API + '/extracts/' + j.job_id + '/viz.html', '_blank');
+}
+
+async function runLETextStream(){
+  const text = document.getElementById('lx_text').value || ''; const prompt = document.getElementById('lx_prompt').value || '';
+  if(!text.trim()) return alert('Вставьте текст');
+  const fd = new FormData(); fd.append('text', text); fd.append('task_prompt', prompt);
+  const r = await fetch(API + '/langextract/text/stream', {method:'POST', body: fd});
+  if(!r.body) return alert('Стрим не поддерживается');
+  const reader = r.body.getReader(); const decoder = new TextDecoder();
+  let buffer = ''; document.getElementById('lx_out').textContent = '';
+  while(true){
+    const {done, value} = await reader.read(); if(done) break;
+    buffer += decoder.decode(value, {stream: true});
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    for(const line of lines){
+      if(line.startsWith('data: ')){
+        const data = line.slice(6).trim();
+        if(data && data !== '[DONE]'){
+          try{ const obj = JSON.parse(data); document.getElementById('lx_out').textContent += JSON.stringify(obj, null, 2) + '\n'; }catch(e){}
+        }
+      }
+    }
+  }
+}
+
+// Загрузка профилей
+async function loadProfiles(){
+  try {
+    const r = await fetch(API + '/profiles');
+    const profiles = await r.json();
+    const container = document.getElementById('profiles');
+    container.innerHTML = '';
+    profiles.forEach(profile => {
+      const div = document.createElement('div');
+      div.className = 'bg-slate-100 p-3 rounded-lg';
+      div.innerHTML = `
+        <h3 class="font-medium text-sm">${profile.name}</h3>
+        <p class="text-xs text-slate-600 mt-1">${profile.description}</p>
+        <button onclick="useProfile('${profile.id}')" class="mt-2 w-full bg-slate-600 text-white px-3 py-1 rounded text-xs hover:bg-slate-700">Использовать</button>
+      `;
+      container.appendChild(div);
+    });
+  } catch (error) {
+    console.error('Ошибка загрузки профилей:', error);
+  }
+}
+
+async function useProfile(profileId) {
+  try {
+    const r = await fetch(API + '/profiles/' + profileId);
+    const profile = await r.json();
+    document.getElementById('q').value = profile.example_query || '';
+    document.getElementById('entities').value = profile.entities ? profile.entities.join(', ') : '';
+    alert('Профиль загружен: ' + profile.name);
+  } catch (error) {
+    alert('Ошибка загрузки профиля: ' + error.message);
+  }
+}
+
+// Загружаем профили при старте
+loadProfiles();
+</script>
+
+</body>
+</html>
