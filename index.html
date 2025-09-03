@@ -186,8 +186,19 @@ apiSave.onclick = () => {
 // Проверка доступности
 apiPing.onclick = async () => {
     apiEcho.textContent = 'Pinging...';
+    const url = apiInput.value.trim();
+    if (!url) {
+        apiEcho.textContent = '❌ URL пустой';
+        return;
+    }
     try { 
-        const r = await fetch(apiInput.value.trim() + '/health', {cache:'no-store'}); 
+        // Добавляем AbortController для таймаута
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 секунд таймаут
+
+        const r = await fetch(url + '/health', { cache: 'no-store', signal: controller.signal }); 
+        clearTimeout(timeoutId);
+
         const data = await r.json();
         if (r.ok && data.ok) {
             apiEcho.textContent = `✅ OK (Model: ${data.model})`;
@@ -195,7 +206,12 @@ apiPing.onclick = async () => {
             apiEcho.textContent = `❌ ERR ${r.status}`;
         }
     } catch(e) { 
-        apiEcho.textContent = '❌ ERR ' + (e?.message||e); 
+        if (e.name === 'AbortError') {
+            apiEcho.textContent = '❌ ERR Timeout';
+        } else {
+            apiEcho.textContent = '❌ ERR Failed to fetch (CORS?)'; 
+        }
+        console.error("Ping failed:", e);
     }
 };
 
