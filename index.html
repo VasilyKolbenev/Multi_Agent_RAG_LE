@@ -101,6 +101,18 @@
               <strong>📚 Источники:</strong>
               <ul id="cites" class="mt-1 space-y-1"></ul>
             </div>
+            
+            <!-- Детали ответа -->
+            <div id="answer-details" class="mt-4 border-t pt-2 hidden">
+                <h4 class="font-semibold text-gray-700">Детали ответа:</h4>
+                <div class="grid grid-cols-2 gap-x-2 text-gray-600">
+                    <div><strong>Тип поиска:</strong> <span id="detail-search-type">...</span></div>
+                    <div><strong>Кандидатов:</strong> <span id="detail-candidates">...</span></div>
+                    <div><strong>Reranker:</strong> <span id="detail-reranker">...</span></div>
+                    <div><strong>Контекст:</strong> <span id="detail-context-size">...</span></div>
+                </div>
+            </div>
+            
           </div>
         </div>
       </section>
@@ -385,11 +397,14 @@ async function ask(){
   const answerEl = document.getElementById('answer');
   const entitiesEl = document.getElementById('extracted_entities');
   const citesEl = document.getElementById('cites');
+  const detailsEl = document.getElementById('answer-details');
   
   planEl.textContent = '';
   answerEl.textContent = '';
   entitiesEl.textContent = '';
   citesEl.innerHTML = '';
+  detailsEl.classList.add('hidden'); // Скрываем детали
+  
   currentHits = []; // Очищаем предыдущие хиты
   
   const ents = document.getElementById('entities')?.value || '';
@@ -430,11 +445,20 @@ async function ask(){
           citesEl.appendChild(li);
         }
         break;
+      case 'search_details':
+        document.getElementById('detail-search-type').textContent = data.data.search_type;
+        document.getElementById('detail-candidates').textContent = data.data.candidates_found;
+        break;
+      case 'rerank_details':
+        document.getElementById('detail-reranker').textContent = `✅ ${data.data.reranker_model}`;
+        document.getElementById('detail-context-size').textContent = `${data.data.final_context_chunks} чанков`;
+        break;
       case 'answer_chunk':
         answerEl.textContent += data.data;
         break;
       case 'answer_done':
         thinking.classList.add('hidden'); // Скрываем "думалку"
+        detailsEl.classList.remove('hidden'); // Показываем детали
         source.close(); // Закрываем соединение
         askBtn.disabled = false;
         askBtn.textContent = '🚀 Задать вопрос';
@@ -442,6 +466,7 @@ async function ask(){
       case 'error':
         answerEl.textContent = '❌ Ошибка: ' + data.data;
         thinking.classList.add('hidden');
+        detailsEl.classList.add('hidden');
         source.close();
         askBtn.disabled = false;
         askBtn.textContent = '🚀 Задать вопрос';
@@ -453,6 +478,7 @@ async function ask(){
     console.error("EventSource failed:", err);
     answerEl.textContent = '❌ Ошибка соединения с сервером. Попробуйте снова.';
     thinking.classList.add('hidden');
+    detailsEl.classList.add('hidden');
     source.close();
     askBtn.disabled = false;
     askBtn.textContent = '🚀 Задать вопрос';

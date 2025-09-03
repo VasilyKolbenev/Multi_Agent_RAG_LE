@@ -111,10 +111,12 @@ class MultiAgent:
         
         # Шаг 3: Гибридный поиск
         hits = self.corpus.search(query, k=k)
+        yield {"type": "search_details", "data": {"search_type": "Hybrid (BM25 + Vector)", "candidates_found": len(hits)}}
         
         # Шаг 3.5: LLM Rerank
         reranked_hits = await llm_rerank(query, hits, self.llm)
         top_hits = reranked_hits[:5] # Берем топ-5 для контекста
+        yield {"type": "rerank_details", "data": {"reranker_model": "gpt-5-mini", "final_context_chunks": len(top_hits)}}
 
         ctx, cites = "", []
         for chunk in top_hits:

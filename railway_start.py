@@ -5,6 +5,16 @@
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+# --- ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА ПЕРЕМЕННЫХ ИЗ .env ---
+# Railway создает .env файл из переменных в UI.
+# Загружаем его явно, чтобы обойти проблемы с окружением.
+if load_dotenv():
+    print("✅ .env file loaded successfully.")
+else:
+    print("⚠️ .env file not found, relying on system environment variables.")
+# --- КОНЕЦ ---
 
 # --- ОТЛАДКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ ---
 print("="*50)
