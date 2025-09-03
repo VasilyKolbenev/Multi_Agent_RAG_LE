@@ -55,34 +55,42 @@ def main():
     print("🚀 MultiAgent-RAG Pro (Production Mode)")
     print("=" * 50)
     
-    if not setup_environment():
+    try:
+        if not setup_environment():
+            print("❌ Ошибка настройки окружения")
+            exit(1)
+        
+        # Выводим конфигурацию
+        print("📋 Конфигурация:")
+        print(f"   LLM Provider: {os.environ.get('LLM_PROVIDER')}")
+        print(f"   LLM Model: {os.environ.get('LLM_MODEL')}")
+        print(f"   LangExtract Model: {os.environ.get('LX_MODEL_ID')}")
+        print(f"   Port: {os.environ.get('PORT')}")
+        print("   OpenAI API Key: ✅ Установлен")
+        print()
+        
+        # Получаем порт (Railway устанавливает автоматически)
+        port = int(os.environ.get("PORT", 8000))
+        
+        print(f"🌐 Запуск сервера на порту {port}")
+        print("📖 После развертывания API будет доступно по адресу:")
+        print("   https://your-app.railway.app/docs")
+        
+        # Запуск с продакшн настройками
+        uvicorn.run(
+            "server.main:app",
+            host="0.0.0.0",
+            port=port,
+            reload=False,  # Отключаем reload в продакшн
+            access_log=True,
+            log_level="info"
+        )
+        
+    except Exception as e:
+        print(f"❌ Критическая ошибка при запуске: {e}")
+        import traceback
+        traceback.print_exc()
         exit(1)
-    
-    # Выводим конфигурацию
-    print("📋 Конфигурация:")
-    print(f"   LLM Provider: {os.environ.get('LLM_PROVIDER')}")
-    print(f"   LLM Model: {os.environ.get('LLM_MODEL')}")
-    print(f"   LangExtract Model: {os.environ.get('LX_MODEL_ID')}")
-    print(f"   Port: {os.environ.get('PORT')}")
-    print("   OpenAI API Key: ✅ Установлен")
-    print()
-    
-    # Получаем порт (Railway/Heroku устанавливают автоматически)
-    port = int(os.environ.get("PORT", 8000))
-    
-    print(f"🌐 Запуск сервера на порту {port}")
-    print("📖 После развертывания API будет доступно по адресу:")
-    print("   https://your-app.railway.app/docs")
-    
-    # Запуск с продакшн настройками
-    uvicorn.run(
-        "server.main:app",
-        host="0.0.0.0",
-        port=port,
-        reload=False,  # Отключаем reload в продакшн
-        access_log=True,
-        log_level="info"
-    )
 
 if __name__ == "__main__":
     main()
