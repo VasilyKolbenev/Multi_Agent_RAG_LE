@@ -17,11 +17,27 @@ else:
 # --- Главные переменные конфигурации ---
 
 # Загружаем ключ OpenAI и сразу проверяем его наличие
+# Сначала пробуем системные переменные (Railway UI Variables)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Если не нашли, показываем подробную диагностику
 if not OPENAI_API_KEY:
+    print("🔍 OPENAI_API_KEY not found. Debugging...")
+    print(f"   - Environment variables count: {len(os.environ)}")
+    
+    # Ищем переменные, которые могут содержать ключ
+    api_key_vars = [k for k in os.environ.keys() if 'API' in k.upper() or 'KEY' in k.upper()]
+    if api_key_vars:
+        print(f"   - Found API/KEY variables: {api_key_vars}")
+        for var in api_key_vars:
+            value = os.environ[var]
+            print(f"     * {var}: {value[:10]}...{value[-4:] if len(value) > 14 else value}")
+    else:
+        print("   - No API/KEY variables found in environment")
+    
     raise ValueError(
         "CRITICAL: OPENAI_API_KEY is not set or could not be loaded. "
-        "Please ensure it is in your .env file or Railway variables."
+        "Please ensure it is set as 'OPENAI_API_KEY' in Railway Variables."
     )
 
 # Печатаем маскированное значение для проверки в логах
