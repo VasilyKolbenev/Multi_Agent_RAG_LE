@@ -3,15 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MultiAgent‑RAG Pro</title>
+  <title>MultiAgent‑RAG Pro v2.2 - Auto Updated!</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style> .mono{font-family: ui-monospace, Menlo, Consolas, monospace;} </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
   <div class="max-w-6xl mx-auto p-6">
     <header class="flex items-center justify-between mb-4">
-      <h1 class="text-2xl font-bold">MultiAgent‑RAG Pro</h1>
-      <div class="text-xs text-slate-500">API: <code id="apiBase" class="mono"></code></div>
+      <div>
+        <h1 class="text-2xl font-bold">🚀 MultiAgent‑RAG Pro</h1>
+        <div class="text-xs text-emerald-600 font-medium">
+          ✅ v2.2 - Auto Updated! | 🕐 Обновлено: 2025-09-04 16:46
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="text-xs text-slate-500">API: <code id="apiBase" class="mono"></code></div>
+        <div class="text-xs text-slate-400" id="buildInfo">Build: AUTO-UPDATE-20250904</div>
+      </div>
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -130,7 +138,9 @@
   </div>
 
 <script>
-const API = new URLSearchParams(location.search).get('api') || (window.API_BASE || 'http://localhost:8000');
+const API = new URLSearchParams(location.search).get('api') || (window.API_BASE || 'https://multiagentragle-production.up.railway.app');
+// Добавляем cache buster для принудительного обновления
+const CACHE_BUSTER = '?v=2.1-langextract-fix-' + Date.now();
 console.log('🔧 API Base URL:', API);
 document.getElementById('apiBase').textContent = API;
 
@@ -344,6 +354,52 @@ async function runLETextWithDisplay(){
   window.open(API + '/extracts/' + j.job_id + '/viz.html', '_blank');
 }
 
+// Показываем информацию о версии и проверяем API
+function showVersionInfo() {
+  const now = new Date();
+  const buildTime = now.toLocaleString('ru-RU');
+  document.getElementById('buildInfo').textContent = `Build: AUTO-UPDATE-20250904${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}`;
+  
+  // Добавляем индикатор обновления
+  const header = document.querySelector('header');
+  const updateBadge = document.createElement('div');
+  updateBadge.className = 'fixed top-4 right-4 bg-emerald-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg z-50 animate-pulse';
+  updateBadge.textContent = '🆕 Обновлено!';
+  document.body.appendChild(updateBadge);
+  
+  // Убираем индикатор через 5 секунд
+  setTimeout(() => {
+    updateBadge.style.opacity = '0';
+    updateBadge.style.transition = 'opacity 1s';
+    setTimeout(() => updateBadge.remove(), 1000);
+  }, 5000);
+}
+
+// Проверяем доступность API
+async function checkAPIStatus() {
+  try {
+    const response = await fetch(API + '/health');
+    const data = await response.json();
+    if (data.ok) {
+      console.log('✅ API доступен, модель:', data.model || 'unknown');
+      // Показываем статус в header
+      const statusDiv = document.createElement('div');
+      statusDiv.className = 'text-xs text-emerald-600';
+      statusDiv.innerHTML = `🟢 API Online | Model: ${data.model || 'unknown'}`;
+      document.getElementById('apiBase').parentElement.appendChild(statusDiv);
+    }
+  } catch (error) {
+    console.log('❌ API недоступен:', error.message);
+    const statusDiv = document.createElement('div');
+    statusDiv.className = 'text-xs text-red-600';
+    statusDiv.innerHTML = '🔴 API Offline';
+    document.getElementById('apiBase').parentElement.appendChild(statusDiv);
+  }
+}
+
+// Запускаем при загрузке
+showVersionInfo();
+checkAPIStatus();
 loadProfiles();
 </script>
 </body>
