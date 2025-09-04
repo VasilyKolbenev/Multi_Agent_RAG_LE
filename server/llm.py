@@ -40,7 +40,7 @@ class LLM:
         if not self.model.startswith("gpt-5"):
             payload["temperature"] = 0.2
             payload["max_tokens"] = 2000
-        async with httpx.AsyncClient(timeout=60) as client:
+        async with httpx.AsyncClient(timeout=30) as client:  # Уменьшаем таймаут до 30 сек
             r = await client.post(url, headers=headers, json=payload)
             r.raise_for_status()
             data = r.json()
@@ -59,7 +59,7 @@ class LLM:
             payload["temperature"] = 0.2
             payload["max_tokens"] = 2000
 
-        async with httpx.AsyncClient(timeout=60) as client:
+        async with httpx.AsyncClient(timeout=30) as client:  # Уменьшаем таймаут до 30 сек
             async with client.stream("POST", url, headers=headers, json=payload) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
@@ -79,7 +79,7 @@ class LLM:
                             continue
 
     async def _ollama(self, system: str, user: str) -> str:
-        async with httpx.AsyncClient(timeout=60) as client:
+        async with httpx.AsyncClient(timeout=30) as client:  # Уменьшаем таймаут до 30 сек
             r = await client.post("http://localhost:11434/api/chat", json={
                 "model": self.model,
                 "messages": [{"role":"system","content":system},{"role":"user","content":user}],
