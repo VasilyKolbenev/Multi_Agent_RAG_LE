@@ -50,14 +50,20 @@ def traces(): return read_traces()
 @app.post("/ingest/text")
 async def ingest_text(text: str = Form(...), doc_id: Optional[str] = Form(None)):
     """Принимает текст, генерирует ID, если он не предоставлен."""
-    if not doc_id:
-        # Генерируем простой doc_id на основе хэша текста
-        import hashlib
-        doc_id = f"doc_{hashlib.md5(text[:100].encode()).hexdigest()[:8]}"
-        
-    corpus.ingest_text(doc_id, text)
-    append_trace({"type":"ingest", "doc_id":doc_id, "len":len(text)})
-    return {"ok": True, "doc_id": doc_id}
+    try:
+        if not doc_id:
+            # Генерируем простой doc_id на основе хэша текста
+            import hashlib
+            doc_id = f"doc_{hashlib.md5(text[:100].encode()).hexdigest()[:8]}"
+            
+        corpus.ingest_text(doc_id, text)
+        append_trace({"type":"ingest", "doc_id":doc_id, "len":len(text)})
+        return {"ok": True, "doc_id": doc_id}
+    except Exception as e:
+        print(f"ERROR in /ingest/text: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"message": "Internal Server Error during ingestion"})
 
 @app.post("/ingest/files")
 async def ingest_files(files: List[UploadFile] = File(...)):
@@ -138,9 +144,15 @@ def delete_document(doc_id: str):
 
 @app.post("/langextract/text")
 async def langextract_text(task_prompt: str = Form(None), text: str = Form(...), doc_id: str = Form("extracted_doc")):
-    out = run_extraction(text, prompt=task_prompt)
-    graph.update_from_items(doc_id, out["items"])
-    return JSONResponse(out)
+    try:
+        out = run_extraction(text, prompt=task_prompt)
+        graph.update_from_items(doc_id, out["items"])
+        return JSONResponse(out)
+    except Exception as e:
+        print(f"ERROR in /langextract/text: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"message": "Internal Server Error during extraction"})
 
 @app.get("/langextract/stream_text")
 async def langextract_stream_text(text: str, task_prompt: Optional[str] = None, doc_id: str = "extracted_doc"):

@@ -38,15 +38,25 @@ def run_extraction(text_or_url: str, prompt: Optional[str]=None, examples: Optio
     print("="*50)
     # --- END DEBUG ---
 
-    result = lx.extract(
-        text_or_documents=text_or_url,
-        prompt_description=prompt,
-        examples=ex,
-        model_id=lx_model_id,
-        api_key=api_key,
-        fence_output=True,
-        use_schema_constraints=False,
-    )
+    try:
+        result = lx.extract(
+            text_or_documents=text_or_url,
+            prompt_description=prompt,
+            examples=ex,
+            model_id=lx_model_id,
+            api_key=api_key,
+            fence_output=True,
+            use_schema_constraints=False,
+        )
+    except Exception as e:
+        print("="*50)
+        print("❌ CRITICAL: LangExtract failed with an exception!")
+        print(f"   Error: {e}")
+        import traceback
+        traceback.print_exc()
+        print("="*50)
+        # Возвращаем пустой результат, чтобы не ломать весь процесс
+        return {"job_id": "error", "items": []}
     
     job_id = uuid.uuid4().hex[:8]
     out_dir = os.path.join("data", "extracts", job_id); os.makedirs(out_dir, exist_ok=True)
