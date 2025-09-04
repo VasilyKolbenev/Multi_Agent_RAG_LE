@@ -44,7 +44,8 @@ if not OPENAI_API_KEY:
 print(f"   - OPENAI_API_KEY: Loaded (sk-proj-...{OPENAI_API_KEY[-4:]})")
 
 # Остальные настройки
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-5-mini")
+# ПРИНУДИТЕЛЬНО используем стабильную модель (Railway может иметь gpt-5-mini в Variables)
+LLM_MODEL = "gpt-4o-mini"  # Принудительно, пока не исправим Railway Variables
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 LX_MODEL_ID = os.getenv("LX_MODEL_ID", "gpt-4o-mini")  # Используем поддерживаемую LangExtract модель
 
