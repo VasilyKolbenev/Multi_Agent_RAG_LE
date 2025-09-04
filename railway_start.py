@@ -7,18 +7,20 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-# --- ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА ПЕРЕМЕННЫХ ИЗ .env ---
-# Railway создает .env файл из переменных в UI.
-# Загружаем его явно, чтобы обойти проблемы с окружением.
-if load_dotenv():
-    print("✅ .env file loaded successfully.")
+# --- ЗАГРУЗКА .env ФАЙЛА ---
+# Явный путь к файлу .env в корне проекта
+env_path = Path('.') / '.env'
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+    print(f"✅ Loaded environment variables from {env_path.resolve()}")
 else:
-    print("⚠️ .env file not found, relying on system environment variables.")
+    print(f"⚠️ {env_path.resolve()} not found. Relying on system environment variables.")
 # --- КОНЕЦ ---
+
 
 # --- ОТЛАДКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ ---
 print("="*50)
-print("🔍 DEBUG: Checking Environment Variables on Railway...")
+print("🔍 DEBUG: Checking Environment Variables...")
 all_vars = os.environ
 if "OPENAI_API_KEY" in all_vars:
     print("✅ OPENAI_API_KEY is available!")
