@@ -179,6 +179,63 @@ def get_documents():
     """Возвращает список всех загруженных документов."""
     return JSONResponse(corpus.list_docs())
 
+@app.get("/analytics/entities")
+def get_entities_analytics():
+    """Возвращает аналитику по сущностям в базе знаний."""
+    try:
+        # Получаем все сущности из графа
+        all_entities = graph.get_all_entities_with_stats()
+        
+        # Подсчитываем статистику
+        total_entities = len(all_entities)
+        total_documents = len(corpus.list_docs())
+        
+        # Группируем по типам
+        entity_types = {}
+        entity_cloud = []
+        
+        for entity in all_entities:
+            entity_type = entity.get('class', 'unknown')
+            entity_text = entity.get('text', '')
+            entity_count = entity.get('doc_count', 1)
+            
+            if entity_type not in entity_types:
+                entity_types[entity_type] = 0
+            entity_types[entity_type] += entity_count
+            
+            # Добавляем в облако с весом
+            entity_cloud.append({
+                'text': entity_text,
+                'type': entity_type,
+                'count': entity_count,
+                'weight': min(entity_count * 10, 100)  # Вес для размера в облаке
+            })
+        
+        # Находим топ категорию
+        top_entity_type = max(entity_types.items(), key=lambda x: x[1])[0] if entity_types else 'Нет данных'
+        
+        # Сортируем облако по популярности
+        entity_cloud.sort(key=lambda x: x['count'], reverse=True)
+        entity_cloud = entity_cloud[:50]  # Топ-50 сущностей
+        
+        return JSONResponse({
+            'total_entities': total_entities,
+            'total_documents': total_documents,
+            'top_entity_type': top_entity_type,
+            'entity_types': entity_types,
+            'entity_cloud': entity_cloud
+        })
+        
+    except Exception as e:
+        print(f"ERROR in /analytics/entities: {e}")
+        return JSONResponse({
+            'total_entities': 0,
+            'total_documents': len(corpus.list_docs()) if corpus else 0,
+            'top_entity_type': 'Ошибка',
+            'entity_types': {},
+            'entity_cloud': []
+        })
+
 @app.delete("/documents/{doc_id}")
 def delete_document(doc_id: str):
     """Удаляет документ по его ID."""

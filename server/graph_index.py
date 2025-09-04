@@ -45,3 +45,19 @@ class GraphIndex:
             if s:
                 docs |= s
         return docs
+    
+    def get_all_entities_with_stats(self) -> List[Dict[str, any]]:
+        """Возвращает все сущности с статистикой по документам."""
+        result = []
+        
+        for entity_text, doc_ids in self.entity_to_docs.items():
+            if entity_text and doc_ids:
+                result.append({
+                    "text": entity_text.title(),  # Красиво форматируем
+                    "class": "entity",  # Базовый тип
+                    "doc_count": len(doc_ids)
+                })
+        
+        # Сортируем по популярности
+        result.sort(key=lambda x: x["doc_count"], reverse=True)
+        return result

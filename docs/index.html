@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>🚀 MultiAgent‑RAG Pro v4.1 - POLISHED UX!</title>
+  <title>🚀 MultiAgent‑RAG Pro v4.2 - SMART ENTITY RAG!</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style> .mono{font-family: ui-monospace, Menlo, Consolas, monospace;} </style>
 </head>
@@ -13,7 +13,7 @@
       <div>
         <h1 class="text-2xl font-bold">🚀 MultiAgent‑RAG Pro</h1>
         <div class="text-xs text-emerald-600 font-medium">
-                     ✅ v4.1 - POLISHED UX! | 🕐 Обновлено: 2024-12-19 22:30
+                     ✅ v4.2 - SMART ENTITY RAG! | 🕐 Обновлено: 2024-12-19 23:00
         </div>
       </div>
       <div class="text-right">
@@ -66,12 +66,29 @@
         
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 mb-2">
           <input id="q" class="border rounded px-3 py-2 lg:col-span-2" placeholder="Например: Итоги квартального отчёта ACME">
-          <input id="entities" class="border rounded px-3 py-2" placeholder="Фильтр сущностей (через запятую)">
+          <div class="relative">
+            <input id="entities" class="border rounded px-3 py-2 w-full" placeholder="Фильтр сущностей (через запятую)">
+            <button class="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-600 hover:text-blue-700" onclick="showEntitySuggestions()" title="Показать доступные сущности">
+              🏷️
+            </button>
+          </div>
         </div>
         <div class="flex gap-2 mb-3">
           <button class="px-4 py-2 rounded bg-emerald-600 text-white" onclick="askIntelligent()">🚀 Умный поиск</button>
           <button class="px-4 py-2 rounded bg-slate-600 text-white" onclick="ask()">🔧 Classic</button>
-          <button class="px-4 py-2 rounded bg-slate-800 text-white" onclick="search()">Поиск</button>
+          <button class="px-4 py-2 rounded bg-slate-800 text-white" onclick="search()">🔍 Поиск</button>
+          <button class="px-4 py-2 rounded bg-blue-600 text-white" onclick="searchByEntities()">🏷️ По сущностям</button>
+        </div>
+        
+        <!-- Entity Suggestions Dropdown -->
+        <div id="entitySuggestions" class="hidden mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-medium text-blue-800">🏷️ Доступные сущности в базе знаний</h3>
+            <button class="text-blue-600 hover:text-blue-800 text-sm" onclick="hideEntitySuggestions()">✕</button>
+          </div>
+          <div id="entityCloud" class="flex flex-wrap gap-2">
+            <div class="text-sm text-blue-600">Загрузка сущностей...</div>
+          </div>
         </div>
         
         <!-- Agentic RAG Process Visualization -->
@@ -97,19 +114,40 @@
       </section>
     </div>
 
+
+    <!-- Аналитика базы знаний -->
     <section class="mt-6 bg-white rounded-2xl shadow p-4">
-      <h2 class="font-semibold mb-2">3) Профили задач</h2>
-      <div class="text-sm text-slate-600 mb-2">Выберите профиль — подставим промпт LangExtract и примеры.</div>
-      <div class="flex gap-2 mb-3">
-        <select id="profile" class="border rounded px-2 py-2"></select>
-        <button class="px-3 py-2 rounded bg-violet-600 text-white" onclick="applyProfile()">Применить</button>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold">📊 Аналитика базы знаний</h2>
+        <button class="px-3 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 transition-colors" onclick="refreshKnowledgeAnalytics()">🔄 Обновить</button>
       </div>
-      <textarea id="lx_prompt" rows="4" class="w-full border rounded px-2 py-1" placeholder="Промпт для LangExtract"></textarea>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+          <div class="text-2xl font-bold text-blue-600" id="totalEntities">0</div>
+          <div class="text-sm text-blue-700">Всего сущностей</div>
+        </div>
+        <div class="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
+          <div class="text-2xl font-bold text-green-600" id="totalDocuments">0</div>
+          <div class="text-sm text-green-700">Документов в базе</div>
+        </div>
+        <div class="bg-gradient-to-r from-purple-50 to-violet-50 p-4 rounded-lg border border-purple-200">
+          <div class="text-2xl font-bold text-purple-600" id="topEntityType">-</div>
+          <div class="text-sm text-purple-700">Топ категория</div>
+        </div>
+      </div>
+      
+      <div class="mb-4">
+        <h3 class="text-sm font-medium text-slate-700 mb-2">🏷️ Облако сущностей (кликните для поиска)</h3>
+        <div id="knowledgeEntityCloud" class="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-lg min-h-[100px]">
+          <div class="text-sm text-slate-500">Загрузите документы для анализа сущностей...</div>
+        </div>
+      </div>
     </section>
 
     <!-- Извлеченные сущности -->
     <section class="mt-6 bg-white rounded-2xl shadow p-4" id="entitiesSection" style="display:none;">
-      <h2 class="font-semibold mb-3">🔍 Извлеченные сущности</h2>
+      <h2 class="font-semibold mb-3">🔍 Извлеченные сущности из последнего документа</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div class="bg-blue-50 p-3 rounded-lg text-center">
           <div class="text-2xl font-bold text-blue-600" id="orgCount">0</div>
@@ -153,11 +191,27 @@
     </section>
 
     <section class="mt-6 bg-white rounded-2xl shadow p-4">
-      <h2 class="font-semibold mb-2">4) LangExtract: запуск и стрим прогресса</h2>
+      <h2 class="font-semibold mb-2">3) LangExtract: извлечение сущностей</h2>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div>
-          <label class="text-sm block mb-1">Текст для извлечения</label>
-          <textarea id="lx_text" rows="6" class="w-full border rounded px-2 py-1" placeholder="Вставьте текст..."></textarea>
+          <!-- Загрузка файла для LangExtract -->
+          <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <label class="text-sm block mb-2 font-medium">📄 Загрузить документ</label>
+            <input id="lx_file" type="file" accept=".txt,.md,.pdf" class="w-full border rounded px-2 py-1 mb-2">
+            <button class="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm" onclick="loadFileForLangExtract()">📂 Загрузить и извлечь</button>
+          </div>
+          
+          <!-- Или ввод текста вручную -->
+          <div class="mb-2">
+            <label class="text-sm block mb-1 font-medium">✍️ Или введите текст вручную</label>
+            <textarea id="lx_text" rows="6" class="w-full border rounded px-2 py-1" placeholder="Вставьте текст для извлечения сущностей..."></textarea>
+          </div>
+          
+          <!-- Промпт для LangExtract -->
+          <div class="mb-3">
+            <label class="text-sm block mb-1 font-medium">🎯 Промпт (необязательно)</label>
+            <textarea id="lx_prompt" rows="2" class="w-full border rounded px-2 py-1 text-sm" placeholder="Извлеки людей, компании, места, события и даты из этого текста"></textarea>
+          </div>
           <!-- Индикатор загрузки для LangExtract -->
           <div id="langextractProgress" class="hidden mt-3 mb-3">
             <div class="bg-gradient-to-r from-violet-50 to-purple-50 rounded-lg p-3 border border-violet-200">
@@ -181,10 +235,30 @@
           </div>
         </div>
         <div>
-          <div class="text-xs text-slate-500 mb-1">Статус</div>
-          <ul id="progress" class="text-sm space-y-1"></ul>
-          <div class="mt-2 text-xs text-slate-500">Первые результаты:</div>
-          <pre id="lx_out" class="mono text-sm whitespace-pre-wrap"></pre>
+          <!-- Вкладки для отображения результатов -->
+          <div class="mb-3">
+            <div class="flex border-b border-slate-200">
+              <button id="tabStatus" class="px-4 py-2 text-sm font-medium border-b-2 border-blue-500 text-blue-600" onclick="switchLangExtractTab('status')">📊 Статус</button>
+              <button id="tabText" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700" onclick="switchLangExtractTab('text')">📄 Текст</button>
+              <button id="tabResults" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700" onclick="switchLangExtractTab('results')">🎯 Результаты</button>
+            </div>
+          </div>
+          
+          <!-- Содержимое вкладок -->
+          <div id="statusTab" class="tab-content">
+            <div class="text-xs text-slate-500 mb-1">Статус обработки:</div>
+            <ul id="progress" class="text-sm space-y-1 bg-slate-50 p-3 rounded min-h-[100px]"></ul>
+          </div>
+          
+          <div id="textTab" class="tab-content hidden">
+            <div class="text-xs text-slate-500 mb-1">Загруженный текст:</div>
+            <div id="loadedText" class="text-sm bg-slate-50 p-3 rounded min-h-[200px] whitespace-pre-wrap overflow-y-auto max-h-[300px]">Здесь будет отображаться текст из загруженного документа...</div>
+          </div>
+          
+          <div id="resultsTab" class="tab-content hidden">
+            <div class="text-xs text-slate-500 mb-1">Извлеченные сущности:</div>
+            <pre id="lx_out" class="mono text-sm whitespace-pre-wrap bg-slate-50 p-3 rounded min-h-[100px]"></pre>
+          </div>
         </div>
       </div>
     </section>
@@ -817,12 +891,287 @@ async function deleteDocument(docId) {
   }
 }
 
+// === LANGEXTRACT TABS FUNCTIONS ===
+
+function switchLangExtractTab(tabName) {
+  // Убираем активные классы со всех вкладок
+  document.getElementById('tabStatus').className = 'px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700';
+  document.getElementById('tabText').className = 'px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700';
+  document.getElementById('tabResults').className = 'px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700';
+  
+  // Скрываем все содержимое вкладок
+  document.getElementById('statusTab').classList.add('hidden');
+  document.getElementById('textTab').classList.add('hidden');
+  document.getElementById('resultsTab').classList.add('hidden');
+  
+  // Активируем выбранную вкладку
+  if (tabName === 'status') {
+    document.getElementById('tabStatus').className = 'px-4 py-2 text-sm font-medium border-b-2 border-blue-500 text-blue-600';
+    document.getElementById('statusTab').classList.remove('hidden');
+  } else if (tabName === 'text') {
+    document.getElementById('tabText').className = 'px-4 py-2 text-sm font-medium border-b-2 border-blue-500 text-blue-600';
+    document.getElementById('textTab').classList.remove('hidden');
+  } else if (tabName === 'results') {
+    document.getElementById('tabResults').className = 'px-4 py-2 text-sm font-medium border-b-2 border-blue-500 text-blue-600';
+    document.getElementById('resultsTab').classList.remove('hidden');
+  }
+}
+
+// === FILE LOADING FOR LANGEXTRACT ===
+
+async function loadFileForLangExtract() {
+  const fileInput = document.getElementById('lx_file');
+  const file = fileInput.files[0];
+  
+  if (!file) {
+    alert('Выберите файл для загрузки');
+    return;
+  }
+  
+  // Показываем прогресс
+  showLangExtractProgress();
+  updateLangExtractProgress(20, 'Загрузка файла...');
+  
+  try {
+    let text = '';
+    
+    if (file.type === 'application/pdf') {
+      // Для PDF используем специальную обработку
+      text = await extractTextFromPDF(file);
+    } else {
+      // Для текстовых файлов
+      text = await file.text();
+    }
+    
+    // Отображаем текст во вкладке "Текст"
+    document.getElementById('loadedText').textContent = text;
+    
+    // Заполняем textarea для извлечения
+    document.getElementById('lx_text').value = text;
+    
+    updateLangExtractProgress(50, 'Файл загружен, извлекаем сущности...');
+    
+    // Переключаемся на вкладку "Текст" чтобы показать загруженный текст
+    switchLangExtractTab('text');
+    
+    // Автоматически запускаем извлечение сущностей
+    await runLETextWithAnimation();
+    
+  } catch (error) {
+    console.error('File loading error:', error);
+    updateLangExtractProgress(0, 'Ошибка загрузки файла: ' + error.message, true);
+    setTimeout(() => hideLangExtractProgress(), 3000);
+  }
+}
+
+async function extractTextFromPDF(file) {
+  // Простое извлечение текста из PDF (базовая реализация)
+  // В реальном проекте лучше использовать PDF.js или серверную обработку
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const text = new TextDecoder().decode(arrayBuffer);
+    
+    // Простая очистка PDF данных - ищем читаемый текст
+    const cleanText = text.replace(/[^\x20-\x7E\u0400-\u04FF\n\r]/g, ' ')
+                          .replace(/\s+/g, ' ')
+                          .trim();
+    
+    if (cleanText.length < 50) {
+      throw new Error('Не удалось извлечь текст из PDF. Попробуйте конвертировать в TXT.');
+    }
+    
+    return cleanText;
+  } catch (error) {
+    throw new Error('Ошибка обработки PDF файла. Попробуйте конвертировать в текстовый формат.');
+  }
+}
+
+// === FIXED SEARCH FUNCTION ===
+
+async function search() {
+  const q = document.getElementById('q').value.trim();
+  if (!q) {
+    alert('Введите поисковый запрос');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API}/search?q=${encodeURIComponent(q)}&k=10`);
+    const results = await response.json();
+    
+    if (response.ok) {
+      // Отображаем результаты поиска
+      const hitsDiv = document.getElementById('hits');
+      hitsDiv.innerHTML = '';
+      
+      if (results.length === 0) {
+        hitsDiv.innerHTML = '<li class="text-slate-500">Документы не найдены</li>';
+      } else {
+        results.forEach((hit, index) => {
+          const li = document.createElement('li');
+          li.innerHTML = `<strong>Результат ${index + 1}:</strong> ${hit.text ? hit.text.substring(0, 200) + '...' : 'Нет текста'}`;
+          hitsDiv.appendChild(li);
+        });
+      }
+      
+      alert(`Найдено ${results.length} результатов`);
+    } else {
+      throw new Error(results.message || 'Ошибка поиска');
+    }
+  } catch (error) {
+    console.error('Search error:', error);
+    alert('Ошибка поиска: ' + error.message);
+  }
+}
+
+// === BUSINESS LOGIC: ENTITY-DRIVEN RAG ===
+
+async function refreshKnowledgeAnalytics() {
+  try {
+    const response = await fetch(API + '/analytics/entities');
+    const analytics = await response.json();
+    
+    if (response.ok) {
+      // Обновляем счетчики
+      document.getElementById('totalEntities').textContent = analytics.total_entities.toLocaleString();
+      document.getElementById('totalDocuments').textContent = analytics.total_documents.toLocaleString();
+      document.getElementById('topEntityType').textContent = analytics.top_entity_type;
+      
+      // Создаем облако сущностей
+      displayEntityCloud(analytics.entity_cloud);
+    }
+  } catch (error) {
+    console.error('Analytics error:', error);
+    document.getElementById('knowledgeEntityCloud').innerHTML = 
+      '<div class="text-sm text-red-500">Ошибка загрузки аналитики</div>';
+  }
+}
+
+function displayEntityCloud(entities) {
+  const cloud = document.getElementById('knowledgeEntityCloud');
+  
+  if (entities.length === 0) {
+    cloud.innerHTML = '<div class="text-sm text-slate-500">Сущности не найдены. Загрузите документы и извлеките сущности.</div>';
+    return;
+  }
+  
+  cloud.innerHTML = entities.map(entity => {
+    // Размер тега зависит от популярности
+    const sizeClass = entity.count > 5 ? 'text-base' : entity.count > 2 ? 'text-sm' : 'text-xs';
+    const colorClass = getEntityColor(entity.type);
+    
+    return `
+      <button class="px-3 py-1 rounded-full ${colorClass} ${sizeClass} font-medium hover:opacity-80 transition-opacity cursor-pointer"
+              onclick="searchByEntity('${entity.text.replace(/'/g, "\\'")}')"
+              title="Найдено в ${entity.count} документах">
+        ${entity.text} (${entity.count})
+      </button>
+    `;
+  }).join('');
+}
+
+function getEntityColor(type) {
+  const colors = {
+    'person': 'bg-blue-100 text-blue-800 hover:bg-blue-200',
+    'organization': 'bg-green-100 text-green-800 hover:bg-green-200',
+    'location': 'bg-purple-100 text-purple-800 hover:bg-purple-200',
+    'date': 'bg-orange-100 text-orange-800 hover:bg-orange-200',
+    'entity': 'bg-slate-100 text-slate-800 hover:bg-slate-200'
+  };
+  return colors[type] || colors['entity'];
+}
+
+async function searchByEntity(entityText) {
+  // Добавляем сущность в поле фильтра
+  const entitiesInput = document.getElementById('entities');
+  const currentValue = entitiesInput.value.trim();
+  
+  if (currentValue) {
+    entitiesInput.value = currentValue + ', ' + entityText;
+  } else {
+    entitiesInput.value = entityText;
+  }
+  
+  // Запускаем умный поиск
+  document.getElementById('q').value = `Информация о ${entityText}`;
+  await askIntelligent();
+}
+
+async function showEntitySuggestions() {
+  const suggestionsDiv = document.getElementById('entitySuggestions');
+  const cloudDiv = document.getElementById('entityCloud');
+  
+  suggestionsDiv.classList.remove('hidden');
+  cloudDiv.innerHTML = '<div class="text-sm text-blue-600">Загрузка...</div>';
+  
+  try {
+    const response = await fetch(API + '/analytics/entities');
+    const analytics = await response.json();
+    
+    if (response.ok && analytics.entity_cloud.length > 0) {
+      cloudDiv.innerHTML = analytics.entity_cloud.slice(0, 20).map(entity => `
+        <button class="px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs hover:bg-blue-200 transition-colors"
+                onclick="addEntityToFilter('${entity.text.replace(/'/g, "\\'")}')">
+          ${entity.text}
+        </button>
+      `).join('');
+    } else {
+      cloudDiv.innerHTML = '<div class="text-sm text-blue-600">Сущности не найдены. Загрузите документы и извлеките сущности.</div>';
+    }
+  } catch (error) {
+    cloudDiv.innerHTML = '<div class="text-sm text-red-600">Ошибка загрузки сущностей</div>';
+  }
+}
+
+function hideEntitySuggestions() {
+  document.getElementById('entitySuggestions').classList.add('hidden');
+}
+
+function addEntityToFilter(entityText) {
+  const entitiesInput = document.getElementById('entities');
+  const currentValue = entitiesInput.value.trim();
+  
+  if (currentValue) {
+    entitiesInput.value = currentValue + ', ' + entityText;
+  } else {
+    entitiesInput.value = entityText;
+  }
+  
+  hideEntitySuggestions();
+}
+
+async function searchByEntities() {
+  const entities = document.getElementById('entities').value.trim();
+  if (!entities) {
+    alert('Введите сущности для поиска');
+    return;
+  }
+  
+  // Формируем умный запрос на основе сущностей
+  const query = `Найди информацию связанную с: ${entities}`;
+  document.getElementById('q').value = query;
+  
+  // Запускаем Agentic RAG с фокусом на сущности
+  await askIntelligent();
+}
+
+// === ENHANCED LANGEXTRACT INTEGRATION ===
+
+// Переопределяем функцию для автоматического обновления аналитики
+const originalRunLETextWithAnimation = runLETextWithAnimation;
+runLETextWithAnimation = async function() {
+  await originalRunLETextWithAnimation();
+  
+  // После извлечения сущностей обновляем аналитику
+  setTimeout(refreshKnowledgeAnalytics, 1000);
+};
+
 // Запускаем при загрузке
 showVersionInfo();
 checkAPIStatus();
-loadProfiles();
 updateModeDescription();
 loadDocumentsList();
+refreshKnowledgeAnalytics();
 </script>
 
 <!-- Список загруженных документов -->
