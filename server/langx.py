@@ -30,7 +30,8 @@ def run_extraction(text_or_url: str, prompt: Optional[str]=None, examples: Optio
 
     # --- DEBUG LANGEXTRACT PARAMS ---
     from . import config
-    lx_model_id = config.LX_MODEL_ID
+    # ПРИНУДИТЕЛЬНО используем поддерживаемую модель (Railway переопределяет переменную)
+    lx_model_id = "gpt-4o-mini"  # Принудительно, так как Railway имеет старое значение в Variables
     api_key = config.OPENAI_API_KEY
     print("="*50)
     print("🔍 DEBUG: LangExtract Parameters")
