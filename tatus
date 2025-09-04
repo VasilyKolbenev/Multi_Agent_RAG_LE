@@ -1,5 +1,0 @@
-[33mfd119e2[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Описание изменений
-[33mb21c3d6[m v2.1 - LangExtract API key fixed + version tracking
-[33mf219ba4[m Final fixes: LangExtract API key + model ID + entities frontend + architecture diagrams
-[33mc0ede82[m Add beautiful entities display on frontend + fix LangExtract and chunking
-[33m1476e16[m Fix: LangExtract model ID and improve text chunking

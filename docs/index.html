@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>🚀 MultiAgent‑RAG Pro v4.7 - UX REVOLUTION!</title>
+  <title>🚀 MultiAgent‑RAG Pro v4.8.1 - CRITICAL FIXES!</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style> .mono{font-family: ui-monospace, Menlo, Consolas, monospace;} </style>
 </head>
@@ -13,7 +13,7 @@
       <div>
         <h1 class="text-2xl font-bold">🚀 MultiAgent‑RAG Pro</h1>
         <div class="text-xs text-emerald-600 font-medium">
-                     ✅ v4.7.1 - ENTERPRISE + LANGEXTRACT FIX! | 🕐 Обновлено: 2024-12-20 01:00
+                     ✅ v4.8.1 - CRITICAL FIXES! | 🕐 Обновлено: 2024-12-20 01:30
         </div>
       </div>
       <div class="text-right">
@@ -30,7 +30,7 @@
             <label class="text-sm block mb-1">Добавить текст</label>
             <input id="title" class="w-full border rounded px-2 py-1 mb-1" placeholder="Название документа">
             <textarea id="text" rows="4" class="w-full border rounded px-2 py-1" placeholder="Вставьте текст..."></textarea>
-            <button class="mt-2 px-3 py-1.5 rounded bg-indigo-600 text-white" onclick="ingestTextWithEntities()">📚 Добавить + Извлечь сущности</button>
+            <button id="ingestTextBtn" class="mt-2 px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 transition-all">📚 Добавить + Извлечь сущности</button>
           </div>
           <div>
             <label class="text-sm block mb-2 font-medium">📁 Загрузить файлы в базу знаний</label>
@@ -45,7 +45,7 @@
                 <button type="button" onclick="document.getElementById('files').click()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors">
                   📂 Выбрать файлы
                 </button>
-              </div>
+          </div>
               
               <!-- Selected Files Preview -->
               <div id="selectedFiles" class="hidden mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
@@ -54,7 +54,7 @@
               </div>
             </div>
             
-            <button id="uploadBtn" class="w-full px-4 py-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 active:scale-95 transition-all font-medium text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" onclick="ingestFilesWithFeedback()" disabled>
+            <button id="uploadBtn" class="w-full px-4 py-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 active:scale-95 transition-all font-medium text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
               <span id="uploadBtnText">📤 Загрузить файлы в базу знаний</span>
               <div id="uploadSpinner" class="hidden inline-flex items-center">
                 <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -98,7 +98,7 @@
             <button class="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-600 hover:text-blue-700" onclick="showEntitySuggestions()" title="Показать доступные сущности">
               🏷️
             </button>
-          </div>
+        </div>
         </div>
         <div class="flex flex-col sm:flex-row gap-2 mb-3">
           <button class="flex-1 px-6 py-3 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition-all font-medium text-lg" onclick="askIntelligent()" title="Умные агенты анализируют и отвечают на вопрос">
@@ -1255,34 +1255,43 @@ async function processManualText() {
 // === LANGEXTRACT TIMEOUT HANDLER ===
 
 async function runLETextWithTimeout(text) {
-  return new Promise(async (resolve, reject) => {
-    // Устанавливаем таймаут 30 секунд
-    const timeout = setTimeout(() => {
-      reject(new Error('Таймаут анализа (30 секунд). Попробуйте с меньшим текстом.'));
-    }, 30000);
+  console.log('🚀 runLETextWithTimeout called with text length:', text.length);
+  
+  try {
+    updateLangExtractProgress(20, 'Подготовка запроса...');
     
+    // Создаем промис с таймаутом
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    updateLangExtractProgress(40, 'Отправка на анализ...');
     try {
       updateLangExtractProgress(60, 'Отправка на анализ...');
       
-      const response = await fetch(`${API}/langextract`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          text: text,
-          task_prompt: document.getElementById('lx_prompt').value || 'Извлеки людей, компании, места, события и даты из этого текста'
-        })
-      });
-      
-      updateLangExtractProgress(80, 'Обработка результатов...');
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      console.log('LangExtract result:', result);
+    console.log('📡 Sending request to LangExtract API...');
+    const response = await fetch(`${API}/langextract`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: text.substring(0, 5000), // Ограничиваем размер текста
+        task_prompt: document.getElementById('lx_prompt')?.value || 'Извлеки людей, компании, места, события и даты из этого текста'
+      }),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    updateLangExtractProgress(80, 'Обработка результатов...');
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${response.statusText}. ${errorText}`);
+    }
+    
+    const result = await response.json();
+    console.log('✅ LangExtract result:', result);
       
       if (result.success && result.items) {
         // Отображаем результаты
@@ -1294,18 +1303,23 @@ async function runLETextWithTimeout(text) {
           hideLangExtractProgress();
         }, 2000);
         
-        clearTimeout(timeout);
-        resolve(result);
-      } else {
-        throw new Error(result.message || 'Не удалось извлечь сущности');
-      }
-      
-    } catch (error) {
-      clearTimeout(timeout);
-      console.error('LangExtract error:', error);
-      reject(error);
+        return result;
+          } else {
+      throw new Error(result.message || 'Не удалось извлечь сущности');
     }
-  });
+    
+  } catch (error) {
+    console.error('❌ LangExtract analysis error:', error);
+    
+    if (error.name === 'AbortError') {
+      updateLangExtractProgress(0, '⏰ Таймаут анализа (30 секунд). Попробуйте с меньшим текстом.');
+    } else {
+      updateLangExtractProgress(0, `❌ Ошибка: ${error.message}`);
+    }
+    
+    setTimeout(() => hideLangExtractProgress(), 5000);
+    throw error;
+  }
 }
 
 // === ENHANCED FILE FORMAT SUPPORT ===
@@ -1905,6 +1919,248 @@ function showKeyboardShortcutsHint() {
   }
 }
 
+// === ENTERPRISE RAG FUNCTIONS ===
+
+// Демо данные для Enterprise RAG
+const DEMO_DATA = {
+  postgresql_records: [
+    {id: 1, title: 'Клиент: ООО "Альфа"', content: 'Крупный клиент из Москвы. Оборот 50М руб. Контакт: Иванов И.И. Тел: +7-495-123-45-67'},
+    {id: 2, title: 'Транзакция #12345', content: 'Платеж на сумму 150,000 руб от ООО "Альфа". Дата: 15.12.2024. Статус: Выполнено'},
+    {id: 3, title: 'Клиент: ИП Петров', content: 'Индивидуальный предприниматель из СПб. Сфера: IT-услуги. Оборот 2М руб.'}
+  ],
+  confluence_pages: [
+    {id: 'page1', title: 'API Documentation', content: 'Документация по REST API. Версия 2.1. Поддерживает аутентификацию через JWT токены.'},
+    {id: 'page2', title: 'Deployment Guide', content: 'Инструкция по развертыванию. Требования: Docker, PostgreSQL, Redis. Порт по умолчанию: 8000'},
+    {id: 'page3', title: 'Troubleshooting', content: 'Решение частых проблем. Ошибка 500: проверить подключение к БД. Ошибка 404: проверить роутинг.'}
+  ]
+};
+
+let enterpriseStats = {
+  totalRecords: 0,
+  totalEntities: 0,
+  totalQueries: 0,
+  lastSync: null
+};
+
+async function loadDemoData() {
+  const btn = event.target;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Loading...';
+  
+  try {
+    // Симулируем загрузку демо данных
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Обновляем статистику
+    enterpriseStats.totalRecords = DEMO_DATA.postgresql_records.length + DEMO_DATA.confluence_pages.length;
+    enterpriseStats.totalEntities = 15; // Симуляция
+    enterpriseStats.lastSync = new Date().toLocaleString('ru-RU');
+    
+    updateEnterpriseStats();
+    
+    // Показываем успех
+    alert(`✅ Demo Data Loaded!\n\n📊 PostgreSQL: ${DEMO_DATA.postgresql_records.length} records\n📚 Confluence: ${DEMO_DATA.confluence_pages.length} pages\n🏷️ Entities: ${enterpriseStats.totalEntities}\n\nТеперь можно тестировать Enterprise Search!`);
+    
+  } catch (error) {
+    alert('❌ Error loading demo data: ' + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+async function simulateSync() {
+  const btn = event.target;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Syncing...';
+  
+  try {
+    // Симулируем процесс синхронизации
+    for (let i = 0; i <= 100; i += 20) {
+      btn.textContent = `🔄 Syncing ${i}%`;
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    // Обновляем статистику
+    enterpriseStats.totalRecords += Math.floor(Math.random() * 5) + 1;
+    enterpriseStats.totalEntities += Math.floor(Math.random() * 10) + 5;
+    enterpriseStats.lastSync = new Date().toLocaleString('ru-RU');
+    
+    updateEnterpriseStats();
+    
+    alert('✅ Sync completed successfully!\n\nNew records and entities have been processed.');
+    
+  } catch (error) {
+    alert('❌ Sync failed: ' + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function updateEnterpriseStats() {
+  document.getElementById('totalRecords').textContent = enterpriseStats.totalRecords;
+  document.getElementById('totalEntities').textContent = enterpriseStats.totalEntities;
+  document.getElementById('lastSync').textContent = enterpriseStats.lastSync || 'Never';
+  document.getElementById('activeSources').textContent = enterpriseStats.totalRecords > 0 ? '3/3' : '1/3';
+}
+
+async function runEnterpriseSearch() {
+  const query = document.getElementById('enterpriseQuery')?.value || 'Покажи информацию о клиентах из Москвы';
+  const resultsDiv = document.getElementById('enterpriseResults');
+  const contentDiv = document.getElementById('enterpriseResultsContent');
+  
+  if (!resultsDiv || !contentDiv) {
+    // Создаем результаты inline если элементов нет
+    const inlineResults = document.createElement('div');
+    inlineResults.className = 'mt-4 p-4 bg-slate-50 rounded-lg border';
+    inlineResults.innerHTML = `
+      <h3 class="text-sm font-medium mb-3">📊 Enterprise Search Results</h3>
+      <div id="inlineEnterpriseContent"></div>
+    `;
+    event.target.parentElement.parentElement.appendChild(inlineResults);
+    
+    await performEnterpriseSearch(query, document.getElementById('inlineEnterpriseContent'));
+    return;
+  }
+  
+  resultsDiv.classList.remove('hidden');
+  contentDiv.innerHTML = '<div class="text-center py-4">🔍 Searching across enterprise sources...</div>';
+  
+  await performEnterpriseSearch(query, contentDiv);
+}
+
+async function performEnterpriseSearch(query, contentDiv) {
+  try {
+    // Симулируем поиск с задержкой
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Симулируем результаты поиска по разным источникам
+    const results = {
+      postgresql: DEMO_DATA.postgresql_records.filter(r => 
+        r.content.toLowerCase().includes('москва') || 
+        r.content.toLowerCase().includes('альфа') ||
+        r.content.toLowerCase().includes('клиент')
+      ),
+      confluence: DEMO_DATA.confluence_pages.filter(p => 
+        p.content.toLowerCase().includes('api') ||
+        p.content.toLowerCase().includes('документация')
+      )
+    };
+    
+    enterpriseStats.totalQueries += 1;
+    updateEnterpriseStats();
+    
+    let html = `
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium">Query: "${query}"</span>
+          <span class="text-xs text-slate-500">Found: ${results.postgresql.length + results.confluence.length} results</span>
+        </div>
+    `;
+    
+    // PostgreSQL Results
+    if (results.postgresql.length > 0) {
+      html += `
+        <div class="border border-blue-200 rounded-lg p-3 bg-blue-50">
+          <h4 class="text-sm font-medium text-blue-800 mb-2">🐘 PostgreSQL Results (${results.postgresql.length})</h4>
+          <div class="space-y-2">
+      `;
+      
+      results.postgresql.forEach(record => {
+        html += `
+          <div class="bg-white p-2 rounded border text-xs">
+            <div class="font-medium">${record.title}</div>
+            <div class="text-slate-600 mt-1">${record.content}</div>
+          </div>
+        `;
+      });
+      
+      html += '</div></div>';
+    }
+    
+    // Confluence Results
+    if (results.confluence.length > 0) {
+      html += `
+        <div class="border border-purple-200 rounded-lg p-3 bg-purple-50">
+          <h4 class="text-sm font-medium text-purple-800 mb-2">📚 Confluence Results (${results.confluence.length})</h4>
+          <div class="space-y-2">
+      `;
+      
+      results.confluence.forEach(page => {
+        html += `
+          <div class="bg-white p-2 rounded border text-xs">
+            <div class="font-medium">${page.title}</div>
+            <div class="text-slate-600 mt-1">${page.content}</div>
+          </div>
+        `;
+      });
+      
+      html += '</div></div>';
+    }
+    
+    // AI Analysis
+    html += `
+      <div class="border border-green-200 rounded-lg p-3 bg-green-50">
+        <h4 class="text-sm font-medium text-green-800 mb-2">🤖 AI Analysis</h4>
+        <div class="text-xs text-green-700">
+          <p>✅ Found ${results.postgresql.length + results.confluence.length} relevant documents across ${results.postgresql.length > 0 ? 1 : 0 + results.confluence.length > 0 ? 1 : 0} data sources</p>
+          <p>🏷️ Key entities: ООО "Альфа", Москва, API Documentation, PostgreSQL</p>
+          <p>💡 Recommendation: Cross-reference client data with technical documentation for better support</p>
+        </div>
+      </div>
+    `;
+    
+    html += '</div>';
+    
+    contentDiv.innerHTML = html;
+    
+  } catch (error) {
+    contentDiv.innerHTML = `<div class="text-red-600 text-sm">❌ Search failed: ${error.message}</div>`;
+  }
+}
+
+function showEnterpriseAnalytics() {
+  const analytics = `
+📊 Enterprise RAG Analytics
+
+🔄 Data Sources:
+• PostgreSQL: ${DEMO_DATA.postgresql_records.length} records
+• Confluence: ${DEMO_DATA.confluence_pages.length} pages  
+• File System: Active
+
+📈 Performance:
+• Total Records: ${enterpriseStats.totalRecords}
+• Total Entities: ${enterpriseStats.totalEntities}
+• Search Queries: ${enterpriseStats.totalQueries}
+• Last Sync: ${enterpriseStats.lastSync || 'Never'}
+
+🏷️ Top Entities:
+• ООО "Альфа" (3 mentions)
+• Москва (2 mentions)  
+• API (2 mentions)
+• PostgreSQL (1 mention)
+
+💡 Insights:
+• Most queries target client data
+• Documentation is frequently accessed
+• Moscow-based entities dominate
+  `;
+  
+  alert(analytics);
+}
+
+function openArchitectureDiagrams() {
+  window.open('architecture_diagrams.html', '_blank');
+}
+
+// Инициализация Enterprise статистики
+function initializeEnterpriseStats() {
+  updateEnterpriseStats();
+}
+
 // Привязываем обработчики кнопок
 document.addEventListener('DOMContentLoaded', function() {
   // Инициализируем Drag & Drop
@@ -1925,32 +2181,115 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Кнопка "Добавить + Извлечь сущности" в секции Инжест
-  const ingestTextBtn = document.querySelector('button[onclick="ingestTextWithEntities()"]');
+  const ingestTextBtn = document.getElementById('ingestTextBtn');
   if (ingestTextBtn) {
     ingestTextBtn.addEventListener('click', function(e) {
       e.preventDefault();
+      console.log('🔥 Ingest text button clicked!');
       ingestTextWithEntities();
     });
-    console.log('Ingest text button event listener attached');
+    console.log('✅ Ingest text button event listener attached');
   } else {
-    console.error('Ingest text button not found');
+    console.error('❌ Ingest text button not found');
   }
   
   // Кнопка "Загрузить файлы в базу знаний"
-  const uploadBtn = document.querySelector('button[onclick="ingestFilesWithFeedback()"]');
+  const uploadBtn = document.getElementById('uploadBtn');
   if (uploadBtn) {
     uploadBtn.addEventListener('click', function(e) {
       e.preventDefault();
-      ingestFilesWithFeedback();
+      console.log('🔥 Upload files button clicked!');
+      if (!uploadBtn.disabled) {
+        ingestFilesWithFeedback();
+      }
     });
-    console.log('Upload files button event listener attached');
+    console.log('✅ Upload files button event listener attached');
   } else {
-    console.error('Upload files button not found');
+    console.error('❌ Upload files button not found');
   }
 });
 loadDocumentsList();
 refreshKnowledgeAnalytics();
+initializeEnterpriseStats();
 </script>
+
+<!-- Enterprise RAG Section -->
+<section class="mt-6 bg-white rounded-2xl shadow p-4">
+  <h2 class="font-semibold mb-3 flex items-center">
+    🏢 Enterprise RAG 
+    <span class="ml-2 px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">DEMO</span>
+  </h2>
+  
+  <!-- Enterprise Status Dashboard -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+    <!-- Data Sources Status -->
+    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+      <h3 class="text-sm font-medium text-blue-800 mb-2">📊 Data Sources</h3>
+      <div id="enterpriseDataSources" class="space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <span>🐘 PostgreSQL Demo</span>
+          <span id="pgStatus" class="px-2 py-1 bg-gray-200 text-gray-600 rounded">Offline</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span>📚 Confluence Demo</span>
+          <span id="confluenceStatus" class="px-2 py-1 bg-gray-200 text-gray-600 rounded">Offline</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span>📁 File System</span>
+          <span id="fileSystemStatus" class="px-2 py-1 bg-green-200 text-green-700 rounded">Online</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sync Statistics -->
+    <div class="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
+      <h3 class="text-sm font-medium text-green-800 mb-2">🔄 Sync Stats</h3>
+      <div class="space-y-1 text-xs">
+        <div>Records: <span id="totalRecords" class="font-bold">0</span></div>
+        <div>Entities: <span id="totalEntities" class="font-bold">0</span></div>
+        <div>Last Sync: <span id="lastSync" class="font-bold">Never</span></div>
+      </div>
+    </div>
+    
+    <!-- Enterprise Analytics -->
+    <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+      <h3 class="text-sm font-medium text-purple-800 mb-2">📈 Analytics</h3>
+      <div class="space-y-1 text-xs">
+        <div>Sources: <span id="activeSources" class="font-bold">1/3</span></div>
+        <div>Queries: <span id="totalQueries" class="font-bold">0</span></div>
+        <div>Uptime: <span id="systemUptime" class="font-bold">100%</span></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Quick Demo Actions -->
+  <div class="p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
+    <h3 class="text-sm font-medium text-amber-800 mb-2">⚡ Enterprise Demo</h3>
+    <div class="flex flex-wrap gap-2">
+      <button class="px-3 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors" onclick="loadDemoData()">
+        📊 Load Demo Data
+      </button>
+      <button class="px-3 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors" onclick="simulateSync()">
+        🔄 Simulate Sync
+      </button>
+      <button class="px-3 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors" onclick="showEnterpriseAnalytics()">
+        📈 View Analytics
+      </button>
+      <button class="px-3 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors" onclick="openArchitectureDiagrams()">
+        🏗️ Architecture
+      </button>
+      <button class="px-3 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors" onclick="runEnterpriseSearch()">
+        🚀 Enterprise Search
+      </button>
+    </div>
+  </div>
+  
+  <!-- Enterprise Results -->
+  <div id="enterpriseResults" class="hidden mt-4 p-4 bg-slate-50 rounded-lg border">
+    <h3 class="text-sm font-medium mb-3">📊 Enterprise Search Results</h3>
+    <div id="enterpriseResultsContent"></div>
+  </div>
+</section>
 
 <!-- Список загруженных документов -->
 <section class="mt-6 bg-white rounded-2xl shadow p-4">
