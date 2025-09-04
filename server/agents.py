@@ -122,12 +122,14 @@ class MultiAgent:
         print(f"⏱️ Hybrid search took: {time.time() - step_start:.2f}s")
         yield {"type": "search_details", "data": {"search_type": "Hybrid (BM25 + Vector)", "candidates_found": len(hits)}}
         
-        # Шаг 3.5: LLM Rerank
+        # Шаг 3.5: LLM Rerank (ВРЕМЕННО ОТКЛЮЧЕН - причина зависания!)
         step_start = time.time()
-        reranked_hits = await llm_rerank(query, hits, self.llm)
-        top_hits = reranked_hits[:5] # Берем топ-5 для контекста
-        print(f"⏱️ LLM reranking took: {time.time() - step_start:.2f}s")
-        yield {"type": "rerank_details", "data": {"reranker_model": "gpt-4o-mini", "final_context_chunks": len(top_hits)}}
+        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: LLM reranking передает слишком много данных в API
+        # reranked_hits = await llm_rerank(query, hits, self.llm)
+        # Используем только первые 5 результатов гибридного поиска без LLM rerank
+        top_hits = hits[:5] # Берем топ-5 напрямую из гибридного поиска
+        print(f"⏱️ LLM reranking took: {time.time() - step_start:.2f}s (SKIPPED - was causing 2h+ hangs)")
+        yield {"type": "rerank_details", "data": {"reranker_model": "DISABLED (was hanging)", "final_context_chunks": len(top_hits)}}
 
         ctx = ""
         for chunk in top_hits:
