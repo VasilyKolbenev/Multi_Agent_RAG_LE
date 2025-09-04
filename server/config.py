@@ -18,7 +18,7 @@ else:
 
 # Загружаем ключ OpenAI и сразу проверяем его наличие
 # Сначала пробуем системные переменные (Railway UI Variables)
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("API _KEY") or os.getenv("API_KEY")
 
 # Если не нашли, показываем подробную диагностику
 if not OPENAI_API_KEY:
