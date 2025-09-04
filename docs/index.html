@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>🚀 MultiAgent‑RAG Pro v4.0 - AGENTIC RAG!</title>
+  <title>🚀 MultiAgent‑RAG Pro v4.1 - POLISHED UX!</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style> .mono{font-family: ui-monospace, Menlo, Consolas, monospace;} </style>
 </head>
@@ -13,7 +13,7 @@
       <div>
         <h1 class="text-2xl font-bold">🚀 MultiAgent‑RAG Pro</h1>
         <div class="text-xs text-emerald-600 font-medium">
-                     ✅ v4.0 - AGENTIC RAG! | 🕐 Обновлено: 2024-12-19 22:00
+                     ✅ v4.1 - POLISHED UX! | 🕐 Обновлено: 2024-12-19 22:30
         </div>
       </div>
       <div class="text-right">
@@ -158,9 +158,26 @@
         <div>
           <label class="text-sm block mb-1">Текст для извлечения</label>
           <textarea id="lx_text" rows="6" class="w-full border rounded px-2 py-1" placeholder="Вставьте текст..."></textarea>
+          <!-- Индикатор загрузки для LangExtract -->
+          <div id="langextractProgress" class="hidden mt-3 mb-3">
+            <div class="bg-gradient-to-r from-violet-50 to-purple-50 rounded-lg p-3 border border-violet-200">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-violet-700">🧠 LangExtract обрабатывает...</span>
+                <div class="flex items-center">
+                  <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-violet-600"></div>
+                  <span id="langextractTimer" class="ml-2 text-xs text-violet-600">0s</span>
+                </div>
+              </div>
+              <div class="w-full bg-violet-200 rounded-full h-2">
+                <div id="langextractBar" class="bg-violet-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <div id="langextractStatus" class="text-xs text-violet-600 mt-1">Анализ текста...</div>
+            </div>
+          </div>
+          
           <div class="flex gap-2 mt-2">
-            <button class="px-3 py-1.5 rounded bg-violet-600 text-white" onclick="runLETextWithDisplay()">🔍 Извлечь сущности</button>
-            <button class="px-3 py-1.5 rounded bg-violet-800 text-white" onclick="runLETextStream()">Стрим прогресса</button>
+            <button id="extractBtn" class="px-3 py-1.5 rounded bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" onclick="runLETextWithAnimation()">🔍 Извлечь сущности</button>
+            <button id="streamBtn" class="px-3 py-1.5 rounded bg-violet-800 text-white hover:bg-violet-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" onclick="runLETextStream()">📡 Стрим прогресса</button>
           </div>
         </div>
         <div>
@@ -606,11 +623,234 @@ function updateProgress(percentage) {
   progressText.textContent = `${Math.round(percentage)}%`;
 }
 
+// === LANGEXTRACT ANIMATION FUNCTIONS ===
+
+let langextractTimer = null;
+let langextractStartTime = null;
+
+async function runLETextWithAnimation() {
+  const text = document.getElementById('lx_text').value.trim();
+  if (!text) {
+    alert('Введите текст для извлечения');
+    return;
+  }
+  
+  // Показываем анимацию
+  showLangExtractProgress();
+  
+  try {
+    const prompt = document.getElementById('lx_prompt').value.trim();
+    const form = new FormData();
+    form.append('text', text);
+    if (prompt) form.append('task_prompt', prompt);
+    
+    const response = await fetch(API + '/langextract/text', { method: 'POST', body: form });
+    const result = await response.json();
+    
+    if (response.ok) {
+      // Успешно завершено
+      updateLangExtractProgress(100, 'Завершено! Найдено сущностей: ' + result.items.length);
+      
+      // Отображаем результаты
+      displayExtractedEntities(result.items);
+      
+      setTimeout(() => hideLangExtractProgress(), 2000);
+    } else {
+      throw new Error(result.message || 'Ошибка сервера');
+    }
+  } catch (error) {
+    console.error('LangExtract error:', error);
+    updateLangExtractProgress(0, 'Ошибка: ' + error.message, true);
+    setTimeout(() => hideLangExtractProgress(), 3000);
+  }
+}
+
+function showLangExtractProgress() {
+  const progressDiv = document.getElementById('langextractProgress');
+  const extractBtn = document.getElementById('extractBtn');
+  const streamBtn = document.getElementById('streamBtn');
+  
+  progressDiv.classList.remove('hidden');
+  extractBtn.disabled = true;
+  streamBtn.disabled = true;
+  
+  // Запускаем таймер
+  langextractStartTime = Date.now();
+  langextractTimer = setInterval(updateLangExtractTimer, 100);
+  
+  // Анимация прогресс-бара
+  updateLangExtractProgress(10, 'Отправка запроса...');
+  setTimeout(() => updateLangExtractProgress(30, 'Анализ текста...'), 500);
+  setTimeout(() => updateLangExtractProgress(60, 'Извлечение сущностей...'), 1500);
+}
+
+function updateLangExtractProgress(percentage, status, isError = false) {
+  const bar = document.getElementById('langextractBar');
+  const statusDiv = document.getElementById('langextractStatus');
+  
+  bar.style.width = percentage + '%';
+  statusDiv.textContent = status;
+  
+  if (isError) {
+    bar.classList.remove('bg-violet-600');
+    bar.classList.add('bg-red-600');
+    statusDiv.classList.remove('text-violet-600');
+    statusDiv.classList.add('text-red-600');
+  }
+}
+
+function updateLangExtractTimer() {
+  if (langextractStartTime) {
+    const elapsed = Math.floor((Date.now() - langextractStartTime) / 1000);
+    document.getElementById('langextractTimer').textContent = elapsed + 's';
+  }
+}
+
+function hideLangExtractProgress() {
+  const progressDiv = document.getElementById('langextractProgress');
+  const extractBtn = document.getElementById('extractBtn');
+  const streamBtn = document.getElementById('streamBtn');
+  
+  progressDiv.classList.add('hidden');
+  extractBtn.disabled = false;
+  streamBtn.disabled = false;
+  
+  if (langextractTimer) {
+    clearInterval(langextractTimer);
+    langextractTimer = null;
+    langextractStartTime = null;
+  }
+  
+  // Сброс стилей
+  const bar = document.getElementById('langextractBar');
+  const statusDiv = document.getElementById('langextractStatus');
+  bar.style.width = '0%';
+  bar.classList.remove('bg-red-600');
+  bar.classList.add('bg-violet-600');
+  statusDiv.classList.remove('text-red-600');
+  statusDiv.classList.add('text-violet-600');
+}
+
+// === DOCUMENTS LIST FUNCTIONS ===
+
+async function loadDocumentsList() {
+  const container = document.getElementById('documentsContainer');
+  const loading = document.getElementById('documentsLoading');
+  const error = document.getElementById('documentsError');
+  const list = document.getElementById('documentsList');
+  const grid = document.getElementById('documentsGrid');
+  const empty = document.getElementById('documentsEmpty');
+  
+  // Показываем загрузку
+  loading.classList.remove('hidden');
+  error.classList.add('hidden');
+  list.classList.add('hidden');
+  
+  try {
+    const response = await fetch(API + '/documents');
+    const documents = await response.json();
+    
+    if (response.ok) {
+      loading.classList.add('hidden');
+      list.classList.remove('hidden');
+      
+      if (documents.length === 0) {
+        empty.classList.remove('hidden');
+        grid.innerHTML = '';
+      } else {
+        empty.classList.add('hidden');
+        displayDocuments(documents);
+      }
+    } else {
+      throw new Error('Ошибка загрузки документов');
+    }
+  } catch (err) {
+    console.error('Documents loading error:', err);
+    loading.classList.add('hidden');
+    error.classList.remove('hidden');
+    document.getElementById('documentsErrorText').textContent = err.message;
+  }
+}
+
+function displayDocuments(documents) {
+  const grid = document.getElementById('documentsGrid');
+  
+  grid.innerHTML = documents.map(doc => `
+    <div class="border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition-colors">
+      <div class="flex items-center justify-between mb-2">
+        <div class="font-medium text-sm truncate flex-1 mr-2">${doc.doc_id}</div>
+        <button class="text-red-600 hover:text-red-700 text-xs px-2 py-1 rounded hover:bg-red-50 transition-colors" 
+                onclick="deleteDocument('${doc.doc_id}')" title="Удалить документ">
+          🗑️
+        </button>
+      </div>
+      <div class="text-xs text-slate-600 mb-2">${doc.text_preview}</div>
+      <div class="flex items-center justify-between text-xs text-slate-500">
+        <span>📄 ${doc.text_length.toLocaleString()} символов</span>
+        <span>🕐 Загружен</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function deleteDocument(docId) {
+  if (!confirm(`Удалить документ "${docId}"?`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API}/documents/${encodeURIComponent(docId)}`, {
+      method: 'DELETE'
+    });
+    
+    if (response.ok) {
+      // Обновляем список
+      await loadDocumentsList();
+      alert('Документ удален');
+    } else {
+      const error = await response.json();
+      throw new Error(error.message || 'Ошибка удаления');
+    }
+  } catch (err) {
+    console.error('Delete error:', err);
+    alert('Ошибка удаления: ' + err.message);
+  }
+}
+
 // Запускаем при загрузке
 showVersionInfo();
 checkAPIStatus();
 loadProfiles();
 updateModeDescription();
+loadDocumentsList();
 </script>
+
+<!-- Список загруженных документов -->
+<section class="mt-6 bg-white rounded-2xl shadow p-4">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="font-semibold">📚 База знаний</h2>
+    <button class="px-3 py-1 rounded bg-slate-600 text-white text-xs hover:bg-slate-700 transition-colors" onclick="loadDocumentsList()">🔄 Обновить</button>
+  </div>
+  
+  <div id="documentsContainer">
+    <div id="documentsLoading" class="flex items-center justify-center py-8 text-slate-500">
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-slate-600 mr-2"></div>
+      Загрузка документов...
+    </div>
+    
+    <div id="documentsError" class="hidden p-4 bg-red-50 border border-red-200 rounded-lg">
+      <div class="text-red-700 font-medium">❌ Ошибка загрузки документов</div>
+      <div class="text-red-600 text-sm mt-1" id="documentsErrorText"></div>
+    </div>
+    
+    <div id="documentsList" class="hidden">
+      <div class="grid gap-3" id="documentsGrid"></div>
+      <div id="documentsEmpty" class="hidden text-center py-8 text-slate-500">
+        📄 Документы не найдены. Загрузите первый документ выше!
+      </div>
+    </div>
+  </div>
+</section>
+
 </body>
 </html>
