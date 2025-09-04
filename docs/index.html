@@ -13,7 +13,7 @@
       <div>
         <h1 class="text-2xl font-bold">🚀 MultiAgent‑RAG Pro</h1>
         <div class="text-xs text-emerald-600 font-medium">
-                     ✅ v4.6.4 - MANUAL TEXT & JS FIX! | 🕐 Обновлено: 2024-12-20 00:25
+                     ✅ v4.6.6 - INGEST BUTTONS FIX! | 🕐 Обновлено: 2024-12-20 00:35
         </div>
       </div>
       <div class="text-right">
@@ -247,7 +247,7 @@
           
           <!-- Кнопка для обработки введенного вручную текста -->
           <div class="mt-3">
-            <button id="processTextBtn" class="w-full px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 active:bg-violet-800 transition-colors font-medium text-sm" onclick="processManualText()">
+            <button id="processTextBtn" class="w-full px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 active:bg-violet-800 transition-colors font-medium text-sm cursor-pointer" onclick="processManualText(); return false;">
               🔍 Извлечь сущности из текста
             </button>
           </div>
@@ -455,31 +455,7 @@ function displayEntities(entities) {
 }
 
 // Модифицируем функцию ingestText чтобы она показывала сущности
-async function ingestTextWithEntities(){
-  const title = document.getElementById('title').value || 'doc';
-  const text = document.getElementById('text').value || '';
-  if(!text.trim()) return alert('Вставьте текст');
-  
-  // Сначала добавляем документ
-  const fd1 = new FormData(); 
-  fd1.append('doc_id', title); 
-  fd1.append('text', text);
-  const r1 = await fetch(API + '/ingest/text', {method:'POST', body: fd1});
-  const j1 = await r1.json();
-  
-  // Затем извлекаем сущности
-  const fd2 = new FormData(); 
-  fd2.append('text', text); 
-  fd2.append('task_prompt', document.getElementById('lx_prompt').value || ''); 
-  fd2.append('doc_id', title);
-  const r2 = await fetch(API + '/langextract/text', {method:'POST', body: fd2}); 
-  const j2 = await r2.json();
-  
-  // Отображаем сущности
-  displayEntities(j2.items || []);
-  
-  alert(`✅ Документ "${title}" добавлен!\n🔍 Извлечено ${j2.items ? j2.items.length : 0} сущностей`);
-}
+// === УДАЛЕНА ДУБЛИРУЮЩАЯСЯ ФУНКЦИЯ - ИСПОЛЬЗУЕТСЯ НОВАЯ ВЕРСИЯ НИЖЕ ===
 
 // Модифицируем функцию runLEText чтобы она показывала сущности
 async function runLETextWithDisplay(){
@@ -1170,8 +1146,17 @@ function searchByEntity(entityText) {
 }
 
 async function processManualText() {
-  const textArea = document.getElementById('langextractText');
+  console.log('processManualText called');
+  
+  const textArea = document.getElementById('lx_text');
+  if (!textArea) {
+    alert('Поле для ввода текста не найдено');
+    console.error('lx_text element not found');
+    return;
+  }
+  
   const text = textArea.value.trim();
+  console.log('Text to process:', text);
   
   if (!text) {
     alert('Введите текст для анализа');
@@ -1604,8 +1589,12 @@ async function ingestFilesWithFeedback() {
 // === ENHANCED TEXT INGESTION ===
 
 async function ingestTextWithEntities() {
+  console.log('ingestTextWithEntities called');
+  
   const title = document.getElementById('title').value.trim();
   const text = document.getElementById('text').value.trim();
+  
+  console.log('Title:', title, 'Text length:', text.length);
   
   if (!text) {
     alert('Введите текст для добавления');
@@ -1623,7 +1612,7 @@ async function ingestTextWithEntities() {
     formData.append('text', text);
     if (title) formData.append('doc_id', title);
     
-    const ingestResponse = await fetch(API + '/ingest/text', {
+    const ingestResponse = await fetch(API + '/ingest', {
       method: 'POST',
       body: formData
     });
@@ -1639,9 +1628,15 @@ async function ingestTextWithEntities() {
     extractFormData.append('text', text);
     extractFormData.append('task_prompt', 'Извлеки людей, компании, места, события и даты из этого текста');
     
-    const extractResponse = await fetch(API + '/langextract/text', {
+    const extractResponse = await fetch(API + '/langextract', {
       method: 'POST',
-      body: extractFormData
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: text,
+        task_prompt: 'Извлеки людей, компании, места, события и даты из этого текста'
+      })
     });
     
     const extractResult = await extractResponse.json();
@@ -1680,6 +1675,45 @@ async function ingestTextWithEntities() {
 showVersionInfo();
 checkAPIStatus();
 updateModeDescription();
+
+// Привязываем обработчики кнопок
+document.addEventListener('DOMContentLoaded', function() {
+  // Кнопка обработки ручного текста в LangExtract
+  const processBtn = document.getElementById('processTextBtn');
+  if (processBtn) {
+    processBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      processManualText();
+    });
+    console.log('Manual text button event listener attached');
+  } else {
+    console.error('processTextBtn not found in DOM');
+  }
+  
+  // Кнопка "Добавить + Извлечь сущности" в секции Инжест
+  const ingestTextBtn = document.querySelector('button[onclick="ingestTextWithEntities()"]');
+  if (ingestTextBtn) {
+    ingestTextBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      ingestTextWithEntities();
+    });
+    console.log('Ingest text button event listener attached');
+  } else {
+    console.error('Ingest text button not found');
+  }
+  
+  // Кнопка "Загрузить файлы в базу знаний"
+  const uploadBtn = document.querySelector('button[onclick="ingestFilesWithFeedback()"]');
+  if (uploadBtn) {
+    uploadBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      ingestFilesWithFeedback();
+    });
+    console.log('Upload files button event listener attached');
+  } else {
+    console.error('Upload files button not found');
+  }
+});
 loadDocumentsList();
 refreshKnowledgeAnalytics();
 </script>
