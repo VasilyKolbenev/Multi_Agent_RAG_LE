@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Generator
 
 import langextract as lx
 
-MODEL_ID = os.environ.get("LX_MODEL_ID", "openai:gpt-5-mini")
+MODEL_ID = os.environ.get("LX_MODEL_ID", "gpt-5-mini")  # Убираем openai: префикс
 
 DEFAULT_PROMPT = textwrap.dedent("""Извлеки из текста именованные сущности (organization, person, date, money) и отношения между ними.
 Строго используй текст источника (не перефразируй). Верни атрибуты: type, value, optional_attrs.
@@ -29,7 +29,7 @@ def run_extraction(text_or_url: str, prompt: Optional[str]=None, examples: Optio
              ) for e in examples]
 
     # --- DEBUG LANGEXTRACT PARAMS ---
-    lx_model_id = os.getenv("LX_MODEL_ID", "openai:gpt-5-mini")
+    lx_model_id = os.getenv("LX_MODEL_ID", "gpt-5-mini")
     api_key = os.getenv("OPENAI_API_KEY")
     print("="*50)
     print("🔍 DEBUG: LangExtract Parameters")
