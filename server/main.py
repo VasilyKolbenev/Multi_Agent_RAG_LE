@@ -12,6 +12,7 @@ load_dotenv()
 from .retrieval import HybridCorpus
 from .graph_index import GraphIndex
 from .agents import MultiAgent
+from .agentic_rag import AgenticRAGSystem
 from .storage import append_trace, read_traces
 from .langx import run_extraction, stream_extraction
 from .profiles import PROFILES
@@ -37,6 +38,7 @@ app.add_middleware(
 corpus = HybridCorpus()
 graph = GraphIndex()
 agent = MultiAgent(corpus, graph)
+agentic_system = AgenticRAGSystem(corpus, graph)
 
 @app.get("/health")
 def health(): return {"ok": True, "model": os.getenv("LLM_MODEL","gpt-5-mini")}
@@ -100,7 +102,7 @@ async def ask(q: str, k: int = 5, entities: Optional[str] = None):
 
 @app.get("/ask/stream")
 async def ask_stream(q: str, k: int = 5, entities: Optional[str] = None):
-    """Эндпоинт для потоковой передачи RAG-ответа."""
+    """Эндпоинт для потоковой передачи RAG-ответа (классический MultiAgent)."""
     ents = [x.strip() for x in entities.split(",")] if entities else None
     
     async def event_generator():
@@ -122,6 +124,50 @@ async def ask_stream(q: str, k: int = 5, entities: Optional[str] = None):
 
     return EventSourceResponse(
         event_generator(),
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+@app.get("/ask/agentic")
+async def ask_agentic(q: str, max_iterations: int = 5, confidence_threshold: float = 0.7):
+    """🚀 Новый Agentic RAG эндпоинт - умная многоагентная обработка запросов."""
+    try:
+        result = await agentic_system.process_query(
+            query=q, 
+            max_iterations=max_iterations,
+            confidence_threshold=confidence_threshold
+        )
+        append_trace({"type": "agentic_query", "q": q, "iterations": result.get("agentic_metadata", {}).get("iterations_used", 0)})
+        return JSONResponse(result)
+    except Exception as e:
+        print(f"ERROR in /ask/agentic: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"message": f"Agentic RAG error: {e}"})
+
+@app.get("/ask/agentic/stream")
+async def ask_agentic_stream(q: str, max_iterations: int = 5):
+    """🚀 Потоковый Agentic RAG - показывает процесс принятия решений агентами."""
+    
+    async def agentic_event_generator():
+        try:
+            async for event in agentic_system.stream_query(q, max_iterations=max_iterations):
+                yield {
+                    "event": "message",
+                    "data": json.dumps(event, ensure_ascii=False)
+                }
+        except Exception as e:
+            error_event = {"type": "agentic_error", "data": f"Agentic RAG error: {e}"}
+            yield {
+                "event": "message", 
+                "data": json.dumps(error_event)
+            }
+            print(f"Agentic RAG stream error: {e}")
+
+    return EventSourceResponse(
+        agentic_event_generator(),
         headers={
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no"

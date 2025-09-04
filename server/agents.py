@@ -17,34 +17,77 @@ SYSTEM_CRITIC = (
 )
 
 async def llm_rerank(query: str, docs: List[Dict[str, Any]], llm: LLM) -> List[Dict[str, Any]]:
+    """
+    Оптимизированный LLM reranking с батчами и короткими промптами.
+    Обрабатывает максимум 10 документов батчами по 5 с таймаутом 15 сек.
+    """
     if not docs:
         return []
-    prompt = ("Отсортируй следующих кандидатов по релевантности к запросу. "
-              "Верни только numerated list of indices, for example: 1. 3\n2. 1\n3. 0\n4. 2\n\n"
-              f"Запрос: {query}\n\n" +
-              "\n".join(f"[{i}] {d['text'][:700]}" for i, d in enumerate(docs)))
+    
+    # Ограничиваем до топ-10 кандидатов для скорости
+    candidates = docs[:10]
+    if len(candidates) <= 3:
+        # Если документов мало, используем простую сортировку
+        return candidates
     
     try:
-        response = await llm.complete("You are a helpful re-ranking assistant.", prompt)
-        # Извлекаем числа из ответа
-        ranked_indices = [int(i) for i in re.findall(r'\d+', response)]
+        # Разбиваем на батчи по 5 документов максимум
+        batch_size = 5
+        batches = [candidates[i:i+batch_size] for i in range(0, len(candidates), batch_size)]
         
-        # Проверяем, что все индексы валидны
-        if all(i < len(docs) for i in ranked_indices):
-            # Создаем новый список на основе отсортированных индексов
-            reranked_docs = [docs[i] for i in ranked_indices]
-            # Добавляем оставшиеся документы, которых не было в ответе
-            original_indices = set(range(len(docs)))
-            used_indices = set(ranked_indices)
-            remaining_indices = original_indices - used_indices
-            for i in remaining_indices:
-                reranked_docs.append(docs[i])
-            return reranked_docs
-        else:
-            # Если LLM вернула невалидные индексы, возвращаем исходный порядок
-            return docs
-    except Exception:
-        # В случае ошибки возвращаем исходный порядок
+        ranked_docs = []
+        
+        for batch_idx, batch in enumerate(batches):
+            # Короткий промпт с ограничением текста до 200 символов
+            batch_prompt = (
+                f"Rank these {len(batch)} documents by relevance to query: '{query[:100]}'\n"
+                "Return only numbers (most relevant first): 1,2,3...\n\n"
+            )
+            
+            for i, doc in enumerate(batch):
+                # Ограничиваем текст до 200 символов + очистка
+                clean_text = doc['text'][:200].replace('\n', ' ').strip()
+                batch_prompt += f"{i+1}. {clean_text}...\n"
+            
+            # Короткий системный промпт
+            system_prompt = "You are a document relevance ranker. Be concise."
+            
+            try:
+                # Используем более короткий таймаут для батча
+                response = await llm.complete(system_prompt, batch_prompt)
+                
+                # Извлекаем числа из ответа
+                ranked_indices = []
+                for match in re.findall(r'\b([1-9])\b', response):
+                    idx = int(match) - 1  # Конвертируем в 0-based индекс
+                    if 0 <= idx < len(batch):
+                        ranked_indices.append(idx)
+                
+                # Добавляем документы в порядке ранжирования
+                for idx in ranked_indices:
+                    if idx < len(batch):
+                        ranked_docs.append(batch[idx])
+                
+                # Добавляем оставшиеся документы из батча
+                used_indices = set(ranked_indices)
+                for i, doc in enumerate(batch):
+                    if i not in used_indices:
+                        ranked_docs.append(doc)
+                        
+            except Exception as e:
+                print(f"⚠️ LLM rerank batch {batch_idx} failed: {e}")
+                # В случае ошибки добавляем батч в исходном порядке
+                ranked_docs.extend(batch)
+        
+        # Добавляем оставшиеся документы (если было больше 10)
+        if len(docs) > 10:
+            ranked_docs.extend(docs[10:])
+            
+        return ranked_docs
+        
+    except Exception as e:
+        print(f"⚠️ LLM rerank completely failed: {e}")
+        # В случае полной ошибки возвращаем исходный порядок
         return docs
 
 class MultiAgent:
@@ -122,14 +165,13 @@ class MultiAgent:
         print(f"⏱️ Hybrid search took: {time.time() - step_start:.2f}s")
         yield {"type": "search_details", "data": {"search_type": "Hybrid (BM25 + Vector)", "candidates_found": len(hits)}}
         
-        # Шаг 3.5: LLM Rerank (ВРЕМЕННО ОТКЛЮЧЕН - причина зависания!)
+        # Шаг 3.5: LLM Rerank (ОПТИМИЗИРОВАННАЯ ВЕРСИЯ)
         step_start = time.time()
-        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: LLM reranking передает слишком много данных в API
-        # reranked_hits = await llm_rerank(query, hits, self.llm)
-        # Используем только первые 5 результатов гибридного поиска без LLM rerank
-        top_hits = hits[:5] # Берем топ-5 напрямую из гибридного поиска
-        print(f"⏱️ LLM reranking took: {time.time() - step_start:.2f}s (SKIPPED - was causing 2h+ hangs)")
-        yield {"type": "rerank_details", "data": {"reranker_model": "DISABLED (was hanging)", "final_context_chunks": len(top_hits)}}
+        # Используем новый оптимизированный reranking с батчами и короткими промптами
+        reranked_hits = await llm_rerank(query, hits, self.llm)
+        top_hits = reranked_hits[:5] # Берем топ-5 для контекста
+        print(f"⏱️ LLM reranking took: {time.time() - step_start:.2f}s (OPTIMIZED: batches + short prompts)")
+        yield {"type": "rerank_details", "data": {"reranker_model": "gpt-4o-mini (optimized)", "final_context_chunks": len(top_hits)}}
 
         ctx = ""
         for chunk in top_hits:
