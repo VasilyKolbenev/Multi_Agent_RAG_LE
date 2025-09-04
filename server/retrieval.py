@@ -14,19 +14,24 @@ EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# Инициализация клиента OpenAI (должен быть здесь, чтобы использовать ключ)
-try:
-    openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-except Exception as e:
-    print(f"CRITICAL: Failed to initialize OpenAI client: {e}")
-    openai_client = None
+# Глобальная переменная для клиента, чтобы не создавать его каждый раз
+openai_client = None
+
+def get_openai_client():
+    """Инициализирует и возвращает клиент OpenAI (ленивая инициализация)."""
+    global openai_client
+    if openai_client is None:
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("CRITICAL: OPENAI_API_KEY not found in environment for OpenAI client.")
+        openai_client = OpenAI(api_key=api_key)
+    return openai_client
 
 # --- Утилиты ---
 
 def _get_embedding(text: str):
-    if not openai_client:
-        raise ConnectionError("OpenAI client not initialized. Check API key.")
-    response = openai_client.embeddings.create(input=[text.replace("\n", " ")], model=EMBEDDING_MODEL)
+    client = get_openai_client()
+    response = client.embeddings.create(input=[text.replace("\n", " ")], model=EMBEDDING_MODEL)
     return response.data[0].embedding
 
 def _semantic_chunking(text: str, min_chunk_size=200, max_chunk_size=400):
