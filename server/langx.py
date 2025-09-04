@@ -67,9 +67,21 @@ def run_extraction(text_or_url: str, prompt: Optional[str]=None, examples: Optio
     with open(os.path.join(out_dir, "viz.html"), "w", encoding="utf-8") as f:
         f.write(html.data if hasattr(html, 'data') else html)
     flat = []
-    for doc in result.documents:
-        for ann in doc.annotations:
+    # Обрабатываем новую структуру LangExtract - result может быть AnnotatedDocument
+    if hasattr(result, 'documents'):
+        # Старая структура
+        for doc in result.documents:
+            for ann in doc.annotations:
+                flat.append({"class": ann.extraction_class, "text": ann.extraction_text, "attributes": ann.attributes or {}, "doc_char_start": ann.char_start, "doc_char_end": ann.char_end})
+    elif hasattr(result, 'annotations'):
+        # Новая структура - result сам является AnnotatedDocument
+        for ann in result.annotations:
             flat.append({"class": ann.extraction_class, "text": ann.extraction_text, "attributes": ann.attributes or {}, "doc_char_start": ann.char_start, "doc_char_end": ann.char_end})
+    else:
+        # Если структура неизвестна, пробуем прямой доступ
+        print(f"⚠️ Unknown LangExtract result structure: {type(result)}")
+        print(f"Available attributes: {dir(result)}")
+    
     return {"job_id": job_id, "items": flat}
 
 def stream_extraction(text_or_url: str, prompt: Optional[str]=None) -> Generator[Dict[str, Any], None, None]:
