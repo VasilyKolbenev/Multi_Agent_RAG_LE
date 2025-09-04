@@ -28,12 +28,22 @@ def run_extraction(text_or_url: str, prompt: Optional[str]=None, examples: Optio
                              for it in e.get("extractions",[])]
              ) for e in examples]
 
+    # --- DEBUG LANGEXTRACT PARAMS ---
+    lx_model_id = os.getenv("LX_MODEL_ID", "openai:gpt-5-mini")
+    api_key = os.getenv("OPENAI_API_KEY")
+    print("="*50)
+    print("🔍 DEBUG: LangExtract Parameters")
+    print(f"  - Model ID: {lx_model_id}")
+    print(f"  - API Key Set: {'Yes' if api_key else 'No'}")
+    print("="*50)
+    # --- END DEBUG ---
+
     result = lx.extract(
         text_or_documents=text_or_url,
         prompt_description=prompt,
         examples=ex,
-        model_id=os.getenv("LX_MODEL_ID", "openai:gpt-5-mini"),
-        api_key=os.getenv("OPENAI_API_KEY"),
+        model_id=lx_model_id,
+        api_key=api_key,
         fence_output=True,
         use_schema_constraints=False,
     )

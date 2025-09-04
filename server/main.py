@@ -30,7 +30,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -48,8 +48,13 @@ def profiles(): return PROFILES
 def traces(): return read_traces()
 
 @app.post("/ingest/text")
-async def ingest_text(title: str = Form(...), text: str = Form(...)):
-    doc_id = f"{title.strip()}-{uuid.uuid4().hex[:6]}.txt"
+async def ingest_text(text: str = Form(...), doc_id: Optional[str] = Form(None)):
+    """Принимает текст, генерирует ID, если он не предоставлен."""
+    if not doc_id:
+        # Генерируем простой doc_id на основе хэша текста
+        import hashlib
+        doc_id = f"doc_{hashlib.md5(text[:100].encode()).hexdigest()[:8]}"
+        
     corpus.ingest_text(doc_id, text)
     append_trace({"type":"ingest", "doc_id":doc_id, "len":len(text)})
     return {"ok": True, "doc_id": doc_id}

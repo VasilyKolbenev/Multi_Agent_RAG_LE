@@ -248,19 +248,25 @@ async function ingestText(){
   btn.disabled = true;
   
   try {
+    // Шаг 1: Загружаем документ
     btn.innerHTML = '📚 Загружаю документ...';
     const fd1 = new FormData(); 
     fd1.append('text', text); 
-    fd1.append('doc_id', 'user_doc_' + Date.now());
+    
+    // Генерируем уникальный ID на клиенте для консистентности
+    const docId = 'doc_' + Date.now();
+    fd1.append('doc_id', docId);
+
     const r1 = await fetch(API + '/ingest/text', {method:'POST', body: fd1});
     
-    if (!r1.ok) throw new Error('Ошибка загрузки документа');
+    if (!r1.ok) throw new Error(`Ошибка загрузки документа (${r1.status})`);
     
+    // Шаг 2: Извлекаем сущности
     btn.innerHTML = '🧠 Извлекаю сущности...';
     const fd2 = new FormData();
     fd2.append('text', text);
     fd2.append('task_prompt', 'Извлеки людей, компании, места, события и даты');
-    fd2.append('doc_id', 'extracted_' + Date.now());
+    fd2.append('doc_id', docId); // Используем тот же ID для графа
     
     const r2 = await fetch(API + '/langextract/text', {method:'POST', body: fd2});
     if (r2.ok) {
