@@ -92,12 +92,18 @@ class MultiAgent:
 
     async def stream(self, query: str, k: int = 20, entities_filter: Optional[List[str]] = None, auto_extract: bool = True):
         """Потоковая версия RAG-ответа."""
+        import time
+        start_time = time.time()
+        print(f"🚀 RAG Stream started for query: {query[:50]}...")
         
         # Шаг 1: Планирование (не потоковое)
+        step_start = time.time()
         plan = await self.llm.complete(SYSTEM_PLANNER, query)
+        print(f"⏱️ Planning took: {time.time() - step_start:.2f}s")
         yield {"type": "plan", "data": plan}
         
         # Шаг 2: Извлечение сущностей (не потоковое)
+        step_start = time.time()
         extracted_entities = []
         if auto_extract and not entities_filter:
             try:
@@ -106,17 +112,21 @@ class MultiAgent:
                 entities_filter = extracted_entities[:10]  # Ограничиваем до 10 сущностей
             except Exception as e:
                 print(f"Ошибка извлечения сущностей: {e}")
-        
+        print(f"⏱️ Entity extraction took: {time.time() - step_start:.2f}s")
         yield {"type": "entities", "data": extracted_entities}
         
         # Шаг 3: Гибридный поиск
+        step_start = time.time()
         hits = self.corpus.search(query, k=k)
+        print(f"⏱️ Hybrid search took: {time.time() - step_start:.2f}s")
         yield {"type": "search_details", "data": {"search_type": "Hybrid (BM25 + Vector)", "candidates_found": len(hits)}}
         
         # Шаг 3.5: LLM Rerank
+        step_start = time.time()
         reranked_hits = await llm_rerank(query, hits, self.llm)
         top_hits = reranked_hits[:5] # Берем топ-5 для контекста
-        yield {"type": "rerank_details", "data": {"reranker_model": "gpt-5-mini", "final_context_chunks": len(top_hits)}}
+        print(f"⏱️ LLM reranking took: {time.time() - step_start:.2f}s")
+        yield {"type": "rerank_details", "data": {"reranker_model": "gpt-4o-mini", "final_context_chunks": len(top_hits)}}
 
         ctx = ""
         for chunk in top_hits:
@@ -136,6 +146,7 @@ class MultiAgent:
         yield {"type": "answer_done"}
         
         # Шаг 5: Критика (не потоковое, выполняется после генерации)
+        print(f"🏁 Total RAG processing time: {time.time() - start_time:.2f}s")
         # Для этого нужно собрать полный ответ
         full_answer = "" # Это потребует изменений в логике, пока пропускаем
         # critique = await self.llm.complete(SYSTEM_CRITIC, f"Ответ: {full_answer}\n\nКонтекст: {ctx}")
