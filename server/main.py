@@ -79,6 +79,42 @@ async def ingest_files(files: List[UploadFile] = File(...)):
     append_trace({"type":"ingest_files", "files":saved})
     return {"ok": True, "files": saved, "count": len(saved)}
 
+@app.post("/ingest")
+async def ingest_unified(files: List[UploadFile] = File(None), text: str = Form(None), doc_id: Optional[str] = Form(None)):
+    """Унифицированный эндпоинт для загрузки файлов и текста"""
+    results = []
+    
+    # Обрабатываем файлы, если они есть
+    if files:
+        base = os.environ.get("DOCS_DIR", "data/docs"); os.makedirs(base, exist_ok=True)
+        for f in files:
+            fp = os.path.join(base, f.filename)
+            with open(fp, "wb") as out: 
+                out.write(await f.read())
+            results.append({"type": "file", "filename": f.filename})
+        corpus.load_folder(base)
+    
+    # Обрабатываем текст, если он есть
+    if text and text.strip():
+        if not doc_id:
+            doc_id = f"text_{uuid.uuid4().hex[:8]}"
+        
+        try:
+            import hashlib
+            chunks = corpus.ingest_text(text, doc_id)
+            results.append({"type": "text", "doc_id": doc_id, "chunks": len(chunks)})
+        except Exception as e:
+            import traceback
+            print(f"Error during text ingestion: {e}")
+            traceback.print_exc()
+            return JSONResponse(status_code=500, content={"error": str(e)})
+    
+    if not results:
+        return JSONResponse(status_code=400, content={"error": "No files or text provided"})
+    
+    append_trace({"type":"ingest_unified", "results": results})
+    return {"ok": True, "results": results, "count": len(results)}
+
 @app.post("/ingest/folder")
 async def ingest_folder(path: str = Form(...)):
     corpus.ingest_folder(path)
@@ -256,6 +292,26 @@ async def langextract_text(task_prompt: str = Form(None), text: str = Form(...),
         import traceback
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"message": "Internal Server Error during extraction"})
+
+@app.post("/langextract")
+async def langextract_unified(request_data: dict):
+    """Унифицированный эндпоинт для LangExtract с JSON входом"""
+    try:
+        text = request_data.get('text', '')
+        task_prompt = request_data.get('task_prompt')
+        doc_id = request_data.get('doc_id', 'extracted_doc')
+        
+        if not text.strip():
+            return JSONResponse(status_code=400, content={"message": "Text is required", "success": False})
+        
+        out = run_extraction(text, prompt=task_prompt)
+        graph.update_from_items(doc_id, out["items"])
+        return JSONResponse(out)
+    except Exception as e:
+        print(f"ERROR in /langextract: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"message": "Internal Server Error during extraction", "error": str(e), "success": False})
 
 @app.get("/langextract/stream_text")
 async def langextract_stream_text(text: str, task_prompt: Optional[str] = None, doc_id: str = "extracted_doc"):
