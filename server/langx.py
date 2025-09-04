@@ -73,12 +73,23 @@ def run_extraction(text_or_url: str, prompt: Optional[str]=None, examples: Optio
         for doc in result.documents:
             for ann in doc.annotations:
                 flat.append({"class": ann.extraction_class, "text": ann.extraction_text, "attributes": ann.attributes or {}, "doc_char_start": ann.char_start, "doc_char_end": ann.char_end})
+    elif hasattr(result, 'extractions'):
+        # Новая структура - result.extractions содержит список извлечений
+        for extraction in result.extractions:
+            flat.append({
+                "class": extraction.extraction_class, 
+                "text": extraction.extraction_text, 
+                "attributes": extraction.attributes or {}, 
+                "doc_char_start": getattr(extraction, 'char_start', 0), 
+                "doc_char_end": getattr(extraction, 'char_end', 0)
+            })
+        print(f"✅ LangExtract успешно извлек {len(flat)} сущностей!")
     elif hasattr(result, 'annotations'):
-        # Новая структура - result сам является AnnotatedDocument
+        # Альтернативная структура - result.annotations
         for ann in result.annotations:
             flat.append({"class": ann.extraction_class, "text": ann.extraction_text, "attributes": ann.attributes or {}, "doc_char_start": ann.char_start, "doc_char_end": ann.char_end})
     else:
-        # Если структура неизвестна, пробуем прямой доступ
+        # Если структура неизвестна, показываем отладочную информацию
         print(f"⚠️ Unknown LangExtract result structure: {type(result)}")
         print(f"Available attributes: {dir(result)}")
     
