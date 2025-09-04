@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>🚀 MultiAgent‑RAG Pro v4.6 - OPTIMIZED & CLEAN!</title>
+  <title>🚀 MultiAgent‑RAG Pro v4.7 - UX REVOLUTION!</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style> .mono{font-family: ui-monospace, Menlo, Consolas, monospace;} </style>
 </head>
@@ -13,7 +13,7 @@
       <div>
         <h1 class="text-2xl font-bold">🚀 MultiAgent‑RAG Pro</h1>
         <div class="text-xs text-emerald-600 font-medium">
-                     ✅ v4.6.6 - INGEST BUTTONS FIX! | 🕐 Обновлено: 2024-12-20 00:35
+                     ✅ v4.7 - UX REVOLUTION! | 🕐 Обновлено: 2024-12-20 00:45
         </div>
       </div>
       <div class="text-right">
@@ -34,12 +34,36 @@
           </div>
           <div>
             <label class="text-sm block mb-2 font-medium">📁 Загрузить файлы в базу знаний</label>
-            <div class="mb-3">
-              <input id="files" type="file" multiple accept=".txt,.md,.pdf,.doc,.docx,.rtf,.csv,.json,.xml,.html" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 mb-2">
-              <button class="w-full px-4 py-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 transition-colors font-medium text-sm shadow-sm" onclick="ingestFilesWithFeedback()">
-                📤 Загрузить файлы в базу знаний
-              </button>
+            
+            <!-- Drag & Drop Zone -->
+            <div id="dropZone" class="mb-3 border-2 border-dashed border-slate-300 rounded-lg p-6 text-center transition-all duration-300 hover:border-indigo-400 hover:bg-indigo-50">
+              <div id="dropZoneContent">
+                <div class="text-4xl mb-2">📁</div>
+                <div class="text-sm font-medium text-slate-700 mb-1">Перетащите файлы сюда</div>
+                <div class="text-xs text-slate-500 mb-3">или нажмите для выбора</div>
+                <input id="files" type="file" multiple accept=".txt,.md,.pdf,.doc,.docx,.rtf,.csv,.json,.xml,.html" class="hidden">
+                <button type="button" onclick="document.getElementById('files').click()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors">
+                  📂 Выбрать файлы
+                </button>
+              </div>
+              
+              <!-- Selected Files Preview -->
+              <div id="selectedFiles" class="hidden mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div class="text-sm font-medium text-blue-800 mb-2">📋 Выбранные файлы:</div>
+                <div id="filesList" class="text-xs text-blue-700"></div>
+              </div>
             </div>
+            
+            <button id="uploadBtn" class="w-full px-4 py-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 active:scale-95 transition-all font-medium text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" onclick="ingestFilesWithFeedback()" disabled>
+              <span id="uploadBtnText">📤 Загрузить файлы в базу знаний</span>
+              <div id="uploadSpinner" class="hidden inline-flex items-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Загружаем...
+              </div>
+            </button>
             <div class="text-xs text-slate-600 bg-blue-50 p-2 rounded">
               💡 <strong>Поддерживаемые форматы:</strong> TXT, MD, PDF, DOC, DOCX, RTF, CSV, JSON, XML, HTML<br>
               🚀 <strong>Что происходит:</strong> Файлы загружаются → извлекается текст → индексируется → можно искать через Agentic RAG
@@ -68,7 +92,7 @@
         </div>
         
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 mb-2">
-          <input id="q" class="border rounded px-3 py-2 lg:col-span-2" placeholder="Например: Итоги квартального отчёта ACME">
+          <input id="q" class="border rounded px-3 py-2 lg:col-span-2" placeholder="Например: Итоги квартального отчёта ACME" title="Нажмите Ctrl+Enter для быстрого поиска">
           <div class="relative">
             <input id="entities" class="border rounded px-3 py-2 w-full" placeholder="Фильтр сущностей (через запятую)">
             <button class="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-600 hover:text-blue-700" onclick="showEntitySuggestions()" title="Показать доступные сущности">
@@ -76,14 +100,14 @@
             </button>
           </div>
         </div>
-        <div class="flex gap-2 mb-3">
-          <button class="px-6 py-3 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors font-medium text-lg" onclick="askIntelligent()" title="Умные агенты анализируют и отвечают на вопрос">
+        <div class="flex flex-col sm:flex-row gap-2 mb-3">
+          <button class="flex-1 px-6 py-3 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition-all font-medium text-lg" onclick="askIntelligent()" title="Умные агенты анализируют и отвечают на вопрос">
             🚀 Умный ответ
           </button>
-          <button class="px-4 py-3 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors font-medium" onclick="search()" title="Найти похожие фрагменты документов без генерации ответа">
+          <button class="flex-1 sm:flex-none px-4 py-3 rounded-lg bg-orange-600 text-white hover:bg-orange-700 active:scale-95 transition-all font-medium" onclick="search()" title="Найти похожие фрагменты документов без генерации ответа">
             🔍 Найти фрагменты
           </button>
-          <button class="px-4 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium" onclick="searchByEntities()" title="Поиск по именам, компаниям, местам">
+          <button class="flex-1 sm:flex-none px-4 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all font-medium" onclick="searchByEntities()" title="Поиск по именам, компаниям, местам">
             🏷️ По сущностям
           </button>
         </div>
@@ -1676,8 +1700,155 @@ showVersionInfo();
 checkAPIStatus();
 updateModeDescription();
 
+// === DRAG & DROP FUNCTIONALITY ===
+
+function initializeDragAndDrop() {
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('files');
+  const selectedFiles = document.getElementById('selectedFiles');
+  const filesList = document.getElementById('filesList');
+  const uploadBtn = document.getElementById('uploadBtn');
+  
+  if (!dropZone || !fileInput) return;
+  
+  // Prevent default drag behaviors
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+    document.body.addEventListener(eventName, preventDefaults, false);
+  });
+  
+  // Highlight drop area when item is dragged over it
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, highlight, false);
+  });
+  
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, unhighlight, false);
+  });
+  
+  // Handle dropped files
+  dropZone.addEventListener('drop', handleDrop, false);
+  
+  // Handle file input change
+  fileInput.addEventListener('change', handleFileSelect, false);
+  
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  function highlight(e) {
+    dropZone.classList.add('border-indigo-500', 'bg-indigo-100');
+    dropZone.classList.remove('border-slate-300');
+  }
+  
+  function unhighlight(e) {
+    dropZone.classList.remove('border-indigo-500', 'bg-indigo-100');
+    dropZone.classList.add('border-slate-300');
+  }
+  
+  function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    
+    // Update file input
+    fileInput.files = files;
+    
+    // Show selected files
+    displaySelectedFiles(files);
+  }
+  
+  function handleFileSelect(e) {
+    displaySelectedFiles(e.target.files);
+  }
+  
+  function displaySelectedFiles(files) {
+    if (files.length === 0) {
+      selectedFiles.classList.add('hidden');
+      uploadBtn.disabled = true;
+      return;
+    }
+    
+    let html = '';
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const size = (file.size / 1024).toFixed(1) + ' KB';
+      html += `
+        <div class="flex items-center justify-between py-1">
+          <span class="font-medium">${file.name}</span>
+          <span class="text-blue-500">${size}</span>
+        </div>
+      `;
+    }
+    
+    filesList.innerHTML = html;
+    selectedFiles.classList.remove('hidden');
+    uploadBtn.disabled = false;
+  }
+}
+
+// === KEYBOARD SHORTCUTS ===
+
+function initializeKeyboardShortcuts() {
+  document.addEventListener('keydown', function(e) {
+    // Ctrl+Enter - Быстрый умный поиск
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      const searchInput = document.getElementById('q');
+      if (searchInput.value.trim()) {
+        askIntelligent();
+      }
+      return;
+    }
+    
+    // Ctrl+/ - Фокус на поле поиска
+    if (e.ctrlKey && e.key === '/') {
+      e.preventDefault();
+      document.getElementById('q').focus();
+      return;
+    }
+    
+    // Escape - Очистить поле поиска
+    if (e.key === 'Escape') {
+      const searchInput = document.getElementById('q');
+      if (searchInput === document.activeElement) {
+        searchInput.value = '';
+        searchInput.blur();
+      }
+      return;
+    }
+    
+    // Ctrl+U - Открыть загрузку файлов
+    if (e.ctrlKey && e.key === 'u') {
+      e.preventDefault();
+      document.getElementById('files').click();
+      return;
+    }
+  });
+  
+  // Показываем подсказки по сочетаниям клавиш
+  showKeyboardShortcutsHint();
+}
+
+function showKeyboardShortcutsHint() {
+  // Добавляем подсказку в правый верхний угол
+  const header = document.querySelector('header .text-right');
+  if (header) {
+    const shortcutsHint = document.createElement('div');
+    shortcutsHint.className = 'text-xs text-slate-400 mt-1';
+    shortcutsHint.innerHTML = '⌨️ Ctrl+Enter: поиск | Ctrl+/: фокус | Ctrl+U: файлы';
+    shortcutsHint.title = 'Клавиатурные сокращения:\nCtrl+Enter - Умный поиск\nCtrl+/ - Фокус на поле поиска\nEscape - Очистить поиск\nCtrl+U - Загрузить файлы';
+    header.appendChild(shortcutsHint);
+  }
+}
+
 // Привязываем обработчики кнопок
 document.addEventListener('DOMContentLoaded', function() {
+  // Инициализируем Drag & Drop
+  initializeDragAndDrop();
+  
+  // Добавляем клавиатурные сокращения
+  initializeKeyboardShortcuts();
   // Кнопка обработки ручного текста в LangExtract
   const processBtn = document.getElementById('processTextBtn');
   if (processBtn) {
