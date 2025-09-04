@@ -1,500 +1,393 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MultiAgent-RAG Pro - Architecture Diagrams</title>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background: #f8fafc;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            color: #1e293b;
-            text-align: center;
-            margin-bottom: 40px;
-            font-size: 2.5rem;
-        }
-        h2 {
-            color: #334155;
-            margin-top: 50px;
-            margin-bottom: 20px;
-            font-size: 1.8rem;
-            border-bottom: 3px solid #3b82f6;
-            padding-bottom: 10px;
-        }
-        .diagram-container {
-            margin: 30px 0;
-            padding: 20px;
-            background: #f8fafc;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-        }
-        .download-btn {
-            background: #3b82f6;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            margin: 10px 5px;
-            font-size: 14px;
-        }
-        .download-btn:hover {
-            background: #2563eb;
-        }
-        .description {
-            background: #f1f5f9;
-            padding: 15px;
-            border-radius: 6px;
-            margin: 15px 0;
-            border-left: 4px solid #3b82f6;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🏗️ MultiAgent-RAG Pro - Архитектурные диаграммы</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    .mermaid { 
+      display: flex; 
+      justify-content: center; 
+      margin: 20px 0; 
+    }
+    .diagram-container {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      margin: 20px 0;
+    }
+  </style>
 </head>
-<body>
-    <div class="container">
-        <h1>🏗️ MultiAgent-RAG Pro<br>Architecture Diagrams</h1>
-        
-        <div class="description">
-            <strong>Инструкция по сохранению:</strong><br>
-            • Кликните правой кнопкой по диаграмме → "Сохранить изображение как..."<br>
-            • Или используйте кнопки "Скачать PNG" под каждой диаграммой
-        </div>
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-7xl mx-auto p-6">
+    
+    <header class="text-center mb-8">
+      <h1 class="text-3xl font-bold mb-2">🏗️ MultiAgent-RAG Pro</h1>
+      <h2 class="text-xl text-slate-600 mb-4">Архитектурные диаграммы системы</h2>
+      <div class="text-sm text-emerald-600 font-medium">
+        ✅ v4.5 - SIMPLIFIED & OPTIMIZED | 🕐 Обновлено: 2024-12-20
+      </div>
+    </header>
 
-        <h2>1. Общая архитектура системы</h2>
-        <div class="description">
-            Показывает все основные компоненты: Frontend (GitHub Pages), Backend (Railway), Multi-Agent систему, Hybrid поиск и интеграцию с OpenAI API.
-        </div>
-        <div class="diagram-container">
-            <div class="mermaid" id="diagram1">
-graph TB
-    %% Frontend Layer
-    subgraph "🌐 Frontend (GitHub Pages)"
-        UI["`**MultiAgent-RAG Pro UI**
-        - HTML/JavaScript/TailwindCSS
-        - Загрузка документов
-        - Отображение сущностей
-        - RAG-интерфейс`"]
-    end
-
-    %% Backend Services
-    subgraph "☁️ Backend (Railway)"
-        subgraph "🚀 FastAPI Server"
-            API["`**main.py**
-            - REST API endpoints
-            - CORS middleware
-            - SSE streaming`"]
-            
-            subgraph "🤖 Multi-Agent System"
-                PLANNER["`**Planner Agent**
-                Анализирует запрос
-                Составляет план`"]
-                
-                WRITER["`**Writer Agent**
-                Генерирует ответ
-                Использует контекст`"]
-                
-                CRITIC["`**Critic Agent**
-                Проверяет качество
-                Улучшает ответ`"]
-            end
-            
-            subgraph "🔍 Retrieval System"
-                HYBRID["`**HybridCorpus**
-                - BM25 (sparse search)
-                - FAISS (vector search)
-                - RRF ranking fusion`"]
-                
-                RERANK["`**LLM Reranker**
-                Post-processing
-                с GPT-5-mini`"]
-            end
-            
-            subgraph "📊 Entity Extraction"
-                LANGX["`**LangExtract**
-                - Named Entity Recognition
-                - GPT-5-mini powered
-                - Organizations, Persons, Dates, Money`"]
-            end
-        end
-    end
-
-    %% External Services
-    subgraph "🔗 External APIs"
-        OPENAI["`**OpenAI API**
-        - GPT-5-mini (LLM)
-        - text-embedding-3-small
-        - API Key authentication`"]
-    end
-
-    %% Data Storage
-    subgraph "💾 Data Layer"
-        DOCS["`**Documents Storage**
-        - JSON files
-        - Full text storage`"]
-        
-        CHUNKS["`**Chunks Storage**
-        - Semantic chunking
-        - Max 1500 chars per chunk`"]
-        
-        FAISS_DB["`**FAISS Index**
-        - Vector embeddings
-        - Similarity search`"]
-        
-        BM25_DB["`**BM25 Index**
-        - Keyword search
-        - TF-IDF scoring`"]
-        
-        ENTITIES["`**Extracted Entities**
-        - JSONL format
-        - HTML visualizations`"]
-    end
-
-    %% User Interactions
-    USER["`👤 **User**
-    Загружает документы
-    Задает вопросы`"]
-
-    %% Flow connections
-    USER --> UI
-    UI --> API
-    
-    %% Document ingestion flow
-    API --> HYBRID
-    API --> LANGX
-    HYBRID --> CHUNKS
-    HYBRID --> FAISS_DB
-    HYBRID --> BM25_DB
-    LANGX --> ENTITIES
-    
-    %% Query processing flow
-    API --> PLANNER
-    PLANNER --> HYBRID
-    HYBRID --> RERANK
-    RERANK --> WRITER
-    WRITER --> CRITIC
-    CRITIC --> API
-    
-    %% External API calls
-    LANGX --> OPENAI
-    RERANK --> OPENAI
-    PLANNER --> OPENAI
-    WRITER --> OPENAI
-    CRITIC --> OPENAI
-    HYBRID --> OPENAI
-    
-    %% Data persistence
-    HYBRID --> DOCS
-    LANGX --> ENTITIES
-
-    %% Styling
-    classDef frontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef backend fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef agents fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef storage fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef external fill:#fff8e1,stroke:#f57f17,stroke-width:2px
-
-    class UI frontend
-    class API,HYBRID,RERANK,LANGX backend
-    class PLANNER,WRITER,CRITIC agents
-    class DOCS,CHUNKS,FAISS_DB,BM25_DB,ENTITIES storage
-    class OPENAI external
-            </div>
-            <button class="download-btn" onclick="downloadDiagram('diagram1', 'architecture-overview')">📥 Скачать PNG</button>
-        </div>
-
-        <h2>2. Поток обработки данных</h2>
-        <div class="description">
-            Sequence диаграмма показывает пошаговый процесс: от загрузки документа до генерации ответа с использованием Multi-Agent системы.
-        </div>
-        <div class="diagram-container">
-            <div class="mermaid" id="diagram2">
-sequenceDiagram
-    participant U as 👤 User
-    participant UI as 🌐 Frontend
-    participant API as 🚀 FastAPI
-    participant P as 🧠 Planner
-    participant H as 🔍 HybridCorpus
-    participant R as 🎯 LLM Reranker
-    participant W as ✍️ Writer
-    participant C as 🔍 Critic
-    participant OpenAI as 🤖 OpenAI API
-
-    Note over U,OpenAI: 📄 Document Ingestion Flow
-    U->>UI: Загружает документ
-    UI->>API: POST /ingest/text
-    API->>H: ingest_text(doc_id, text)
-    H->>H: _semantic_chunking(text)
-    H->>OpenAI: Создание embeddings
-    OpenAI-->>H: Vector embeddings
-    H->>H: Обновление FAISS + BM25
-    API->>API: LangExtract для сущностей
-    API->>OpenAI: Извлечение сущностей
-    OpenAI-->>API: Extracted entities
-    API-->>UI: {doc_id, entities}
-    UI-->>U: ✅ Документ добавлен + сущности
-
-    Note over U,OpenAI: 🤔 Query Processing Flow
-    U->>UI: Задает вопрос
-    UI->>API: GET /ask/stream?q=...
-    
-    API->>P: Анализ запроса
-    P->>OpenAI: Планирование подхода
-    OpenAI-->>P: План поиска
-    P-->>API: search_plan
-    
-    API->>H: search(query, k=10)
-    H->>H: BM25 поиск (sparse)
-    H->>OpenAI: Векторный поиск (dense)
-    OpenAI-->>H: Похожие embeddings
-    H->>H: RRF слияние результатов
-    H-->>API: Топ-10 чанков
-    
-    API->>R: LLM reranking
-    R->>OpenAI: Переранжирование по релевантности
-    OpenAI-->>R: Отсортированные чанки
-    R-->>API: Топ-5 чанков
-    
-    API->>W: Генерация ответа
-    W->>OpenAI: Ответ на основе контекста
-    OpenAI-->>W: Сгенерированный ответ
-    W-->>API: draft_answer
-    
-    API->>C: Критическая оценка
-    C->>OpenAI: Проверка качества ответа
-    OpenAI-->>C: Критика и улучшения
-    C-->>API: final_answer
-    
-    API-->>UI: SSE stream {plan, answer, critique, citations}
-    UI-->>U: 📝 Финальный ответ с источниками
-
-    Note over U,OpenAI: 🔍 Entity Search Enhancement
-    U->>UI: Клик по сущности
-    UI->>UI: Добавление в фильтр
-    U->>UI: Поиск с фильтром сущностей
-    UI->>API: GET /search?entities=ACME
-    API->>H: Фильтрованный поиск
-    H-->>API: Релевантные документы
-    API-->>UI: Результаты поиска
-    UI-->>U: 🎯 Точные результаты
-            </div>
-            <button class="download-btn" onclick="downloadDiagram('diagram2', 'data-flow-sequence')">📥 Скачать PNG</button>
-        </div>
-
-        <h2>3. Компонентная диаграмма</h2>
-        <div class="description">
-            Детальная структура кода по слоям: Presentation, API, Business Logic, Infrastructure, Data Storage и внешние сервисы.
-        </div>
-        <div class="diagram-container">
-            <div class="mermaid" id="diagram3">
-graph LR
-    subgraph "🏗️ MultiAgent-RAG Pro Architecture"
-        
-        subgraph "📱 Presentation Layer"
-            HTML["`**index.html**
-            - TailwindCSS styling
-            - PDF.js integration
-            - Entity visualization
-            - Real-time updates`"]
-        end
-        
-        subgraph "🔌 API Layer"
-            MAIN["`**main.py**
-            - FastAPI routes
-            - CORS handling
-            - SSE streaming
-            - Error handling`"]
-        end
-        
-        subgraph "🧠 Business Logic"
-            AGENTS["`**agents.py**
-            - Multi-agent orchestration
-            - Planner/Writer/Critic
-            - Stream processing`"]
-            
-            RETRIEVAL["`**retrieval.py**
-            - HybridCorpus class
-            - FAISS + BM25 integration
-            - Semantic chunking
-            - RRF ranking`"]
-            
-            LANGX["`**langx.py**
-            - LangExtract wrapper
-            - Entity extraction
-            - Visualization export`"]
-        end
-        
-        subgraph "⚙️ Infrastructure"
-            LLM["`**llm.py**
-            - OpenAI API client
-            - Model abstraction
-            - Streaming support`"]
-            
-            CONFIG["`**config.py**
-            - Environment variables
-            - API key management
-            - Model configuration`"]
-            
-            PROFILES["`**profiles.py**
-            - Task templates
-            - Prompt management
-            - Example datasets`"]
-        end
-        
-        subgraph "💾 Data Storage"
-            JSON_DOCS["`**docs.json**
-            Full document texts`"]
-            
-            FAISS_IDX["`**faiss.index**
-            Vector embeddings`"]
-            
-            CHUNK_MAP["`**chunk_map.json**
-            Chunk metadata`"]
-            
-            EXTRACTS["`**extracts/**
-            Entity extractions
-            HTML visualizations`"]
-        end
-        
-        subgraph "🌍 External Services"
-            OPENAI_API["`**OpenAI API**
-            - GPT-5-mini
-            - text-embedding-3-small
-            - Rate limiting`"]
-        end
-        
-        subgraph "☁️ Deployment"
-            GITHUB["`**GitHub Pages**
-            Static frontend hosting`"]
-            
-            RAILWAY["`**Railway**
-            Python backend hosting`"]
-        end
-    end
-    
-    %% Dependencies
-    HTML --> MAIN
-    MAIN --> AGENTS
-    MAIN --> RETRIEVAL
-    MAIN --> LANGX
-    
-    AGENTS --> LLM
-    RETRIEVAL --> LLM
-    LANGX --> LLM
-    
-    LLM --> CONFIG
-    AGENTS --> CONFIG
-    RETRIEVAL --> CONFIG
-    LANGX --> CONFIG
-    
-    AGENTS --> PROFILES
-    
-    RETRIEVAL --> JSON_DOCS
-    RETRIEVAL --> FAISS_IDX
-    RETRIEVAL --> CHUNK_MAP
-    LANGX --> EXTRACTS
-    
-    LLM --> OPENAI_API
-    
-    HTML -.-> GITHUB
-    MAIN -.-> RAILWAY
-    
-    %% Styling
-    classDef presentation fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef api fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef business fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef infra fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
-    classDef storage fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    classDef external fill:#fff8e1,stroke:#fbc02d,stroke-width:2px
-    classDef deploy fill:#f1f8e9,stroke:#689f38,stroke-width:2px
-    
-    class HTML presentation
-    class MAIN api
-    class AGENTS,RETRIEVAL,LANGX business
-    class LLM,CONFIG,PROFILES infra
-    class JSON_DOCS,FAISS_IDX,CHUNK_MAP,EXTRACTS storage
-    class OPENAI_API external
-    class GITHUB,RAILWAY deploy
-            </div>
-            <button class="download-btn" onclick="downloadDiagram('diagram3', 'component-architecture')">📥 Скачать PNG</button>
-        </div>
-
-        <div class="description" style="margin-top: 40px; background: #dcfce7; border-left-color: #22c55e;">
-            <strong>✅ Готово!</strong> Теперь вы можете:<br>
-            • Сохранить этот HTML файл и открыть в браузере<br>
-            • Кликнуть правой кнопкой по любой диаграмме и сохранить как PNG<br>
-            • Использовать кнопки "Скачать PNG" для автоматического сохранения
-        </div>
+    <!-- Общая архитектура системы -->
+    <div class="diagram-container">
+      <h3 class="text-xl font-semibold mb-4 text-center">🌟 Общая архитектура системы</h3>
+      <div class="mermaid">
+        graph TB
+          subgraph "🌐 Frontend"
+            UI["`📱 **Web Interface**
+            HTML + TailwindCSS + JavaScript`"]
+            LX["`🔍 **LangExtract UI**
+            Entity extraction interface`"]
+          end
+          
+          subgraph "🚀 Backend API"
+            MAIN["`⚡ **FastAPI Server**
+            main.py - REST endpoints`"]
+            CORS["`🔗 **CORS Handler**
+            Cross-origin requests`"]
+          end
+          
+          subgraph "🧠 Agentic RAG Core"
+            AGENTS["`🤖 **Agent System**
+            Router → Retrieval → Evaluation → Synthesis`"]
+            LLM["`🎯 **LLM Service**
+            OpenAI GPT-4o-mini integration`"]
+          end
+          
+          subgraph "📊 Data Layer"
+            STORAGE["`💾 **Vector Storage**
+            FAISS + BM25 hybrid search`"]
+            GRAPH["`🕸️ **Graph Index**
+            Entity relationships`"]
+            LANGX_SERVICE["`🏷️ **LangExtract**
+            Entity extraction service`"]
+          end
+          
+          subgraph "☁️ Deployment"
+            RAILWAY["`🚂 **Railway**
+            Backend hosting`"]
+            GITHUB["`📄 **GitHub Pages**
+            Frontend hosting`"]
+          end
+          
+          UI --> MAIN
+          LX --> MAIN
+          MAIN --> AGENTS
+          AGENTS --> LLM
+          AGENTS --> STORAGE
+          AGENTS --> GRAPH
+          MAIN --> LANGX_SERVICE
+          MAIN --> RAILWAY
+          UI --> GITHUB
+          
+          style UI fill:#e1f5fe
+          style AGENTS fill:#f3e5f5
+          style LLM fill:#fff3e0
+          style STORAGE fill:#e8f5e8
+          style RAILWAY fill:#ffe0b2
+      </div>
     </div>
 
-    <script>
-        // Инициализация Mermaid
-        mermaid.initialize({ 
-            startOnLoad: true,
-            theme: 'default',
-            flowchart: {
-                useMaxWidth: true,
-                htmlLabels: true
-            },
-            sequence: {
-                useMaxWidth: true,
-                wrap: true
-            }
+    <!-- Agentic RAG Flow -->
+    <div class="diagram-container">
+      <h3 class="text-xl font-semibold mb-4 text-center">🤖 Agentic RAG - Поток обработки запроса</h3>
+      <div class="mermaid">
+        sequenceDiagram
+          participant User as 👤 Пользователь
+          participant UI as 📱 Frontend
+          participant API as ⚡ FastAPI
+          participant Router as 🎯 Router Agent
+          participant Retriever as 🔍 Retrieval Agent
+          participant Evaluator as ⚖️ Evaluation Agent
+          participant Rewriter as ✏️ Query Rewriter
+          participant Synthesizer as 🧠 Synthesis Agent
+          participant LLM as 🤖 GPT-4o-mini
+          participant Storage as 💾 Vector DB
+          
+          User->>UI: 💬 Задает вопрос
+          UI->>API: 📡 POST /agentic_search
+          API->>Router: 🚀 Запуск агентной системы
+          
+          Router->>LLM: 🎯 Анализ сложности запроса
+          LLM-->>Router: 📊 Стратегия поиска
+          
+          Router->>Retriever: 🔍 Поиск документов
+          Retriever->>Storage: 💾 Hybrid search (BM25+Vector)
+          Storage-->>Retriever: 📄 Кандидаты документов
+          Retriever-->>Router: 📋 Найденные документы
+          
+          Router->>Evaluator: ⚖️ Оценка релевантности
+          Evaluator->>LLM: 🤔 Анализ качества результатов
+          LLM-->>Evaluator: 📈 Оценки релевантности
+          
+          alt 📉 Низкая релевантность
+            Evaluator->>Rewriter: ✏️ Переформулировать запрос
+            Rewriter->>LLM: 🔄 Генерация альтернативных запросов
+            LLM-->>Rewriter: 💡 Новые формулировки
+            Rewriter->>Retriever: 🔍 Повторный поиск
+          end
+          
+          Evaluator-->>Router: ✅ Финальные документы
+          Router->>Synthesizer: 🧠 Синтез ответа
+          Synthesizer->>LLM: 📝 Генерация ответа
+          LLM-->>Synthesizer: 💬 Готовый ответ
+          
+          Synthesizer-->>API: 🎉 Итоговый ответ
+          API-->>UI: 📡 Streaming response
+          UI-->>User: ✨ Показ результата
+      </div>
+    </div>
+
+    <!-- Data Processing Pipeline -->
+    <div class="diagram-container">
+      <h3 class="text-xl font-semibold mb-4 text-center">📊 Пайплайн обработки данных</h3>
+      <div class="mermaid">
+        flowchart TD
+          subgraph "📁 Input Sources"
+            FILES["`📄 **Files**
+            TXT, PDF, DOC, JSON, CSV, HTML`"]
+            TEXT["`📝 **Raw Text**
+            Manual input`"]
+          end
+          
+          subgraph "🔧 Processing"
+            EXTRACT["`🔍 **Text Extraction**
+            Format-specific parsers`"]
+            CHUNK["`✂️ **Text Chunking**
+            Smart segmentation`"]
+            ENTITIES["`🏷️ **Entity Extraction**
+            LangExtract integration`"]
+          end
+          
+          subgraph "🗃️ Indexing"
+            VECTOR["`🧮 **Vector Embedding**
+            Semantic representation`"]
+            BM25["`🔤 **BM25 Index**
+            Keyword search`"]
+            GRAPH_BUILD["`🕸️ **Graph Building**
+            Entity relationships`"]
+          end
+          
+          subgraph "💾 Storage"
+            FAISS["`⚡ **FAISS Index**
+            Vector similarity search`"]
+            BM25_IDX["`📚 **BM25 Storage**
+            Sparse retrieval`"]
+            GRAPH_DB["`🌐 **Graph Index**
+            Entity connections`"]
+          end
+          
+          FILES --> EXTRACT
+          TEXT --> EXTRACT
+          EXTRACT --> CHUNK
+          CHUNK --> ENTITIES
+          CHUNK --> VECTOR
+          CHUNK --> BM25
+          ENTITIES --> GRAPH_BUILD
+          
+          VECTOR --> FAISS
+          BM25 --> BM25_IDX
+          GRAPH_BUILD --> GRAPH_DB
+          
+          style FILES fill:#e3f2fd
+          style EXTRACT fill:#fff3e0
+          style VECTOR fill:#f1f8e9
+          style FAISS fill:#fce4ec
+      </div>
+    </div>
+
+    <!-- Technology Stack -->
+    <div class="diagram-container">
+      <h3 class="text-xl font-semibold mb-4 text-center">🛠️ Технологический стек</h3>
+      <div class="mermaid">
+        mindmap
+          root)🚀 MultiAgent-RAG Pro(
+            (🌐 Frontend)
+              HTML5
+              TailwindCSS
+              Vanilla JavaScript
+              PDF.js
+            (⚡ Backend)
+              Python 3.11+
+              FastAPI
+              Uvicorn
+              Pydantic
+            (🤖 AI/ML)
+              OpenAI GPT-4o-mini
+              FAISS Vector DB
+              BM25 Search
+              LangExtract
+            (📊 Data Processing)
+              JSON handling
+              PDF parsing
+              CSV processing
+              HTML extraction
+            (☁️ Deployment)
+              Railway Backend
+              GitHub Pages Frontend
+              Docker support
+              Environment variables
+      </div>
+    </div>
+
+    <!-- API Endpoints -->
+    <div class="diagram-container">
+      <h3 class="text-xl font-semibold mb-4 text-center">🔗 API Endpoints</h3>
+      <div class="bg-slate-100 p-4 rounded-lg">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <h4 class="font-semibold text-emerald-600 mb-2">🚀 Core Endpoints</h4>
+            <ul class="space-y-1 text-slate-700">
+              <li><code class="bg-blue-100 px-2 py-1 rounded">POST /agentic_search</code> - Умный поиск</li>
+              <li><code class="bg-orange-100 px-2 py-1 rounded">POST /search</code> - Поиск фрагментов</li>
+              <li><code class="bg-purple-100 px-2 py-1 rounded">POST /search_entities</code> - Поиск по сущностям</li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-semibold text-blue-600 mb-2">📊 Data Management</h4>
+            <ul class="space-y-1 text-slate-700">
+              <li><code class="bg-green-100 px-2 py-1 rounded">POST /ingest</code> - Загрузка файлов</li>
+              <li><code class="bg-yellow-100 px-2 py-1 rounded">POST /langextract</code> - Извлечение сущностей</li>
+              <li><code class="bg-red-100 px-2 py-1 rounded">GET /entities</code> - Список сущностей</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance & Optimization -->
+    <div class="diagram-container">
+      <h3 class="text-xl font-semibold mb-4 text-center">⚡ Оптимизации производительности</h3>
+      <div class="mermaid">
+        graph LR
+          subgraph "🔧 Backend Optimizations"
+            TIMEOUT["`⏱️ **Reduced Timeouts**
+            30s API calls`"]
+            BATCH["`📦 **Batch Processing**
+            LLM reranking in batches`"]
+            LIMIT["`🎯 **Result Limiting**
+            Max 10 candidates`"]
+          end
+          
+          subgraph "🚀 Frontend Optimizations"
+            STREAM["`📡 **Streaming**
+            Real-time response display`"]
+            CACHE["`💾 **Client Caching**
+            Entity suggestions cache`"]
+            LAZY["`⚡ **Lazy Loading**
+            Progressive content loading`"]
+          end
+          
+          subgraph "🗃️ Data Optimizations"
+            HYBRID["`🔀 **Hybrid Search**
+            BM25 + Vector combined`"]
+            RRF["`🎯 **RRF Ranking**
+            Reciprocal Rank Fusion`"]
+            SMART_CHUNK["`✂️ **Smart Chunking**
+            Optimized text segmentation`"]
+          end
+          
+          TIMEOUT --> STREAM
+          BATCH --> CACHE
+          LIMIT --> LAZY
+          HYBRID --> RRF
+          RRF --> SMART_CHUNK
+          
+          style TIMEOUT fill:#ffebee
+          style STREAM fill:#e8f5e8
+          style HYBRID fill:#e3f2fd
+      </div>
+    </div>
+
+    <footer class="text-center mt-8 text-slate-500 text-sm">
+      <p>🏗️ Архитектурные диаграммы MultiAgent-RAG Pro v4.5</p>
+      <p>📅 Создано: 2024-12-20 | 🔄 Последнее обновление: v4.5 - SIMPLIFIED & OPTIMIZED</p>
+    </footer>
+
+  </div>
+
+  <script>
+    // Инициализация Mermaid
+    mermaid.initialize({ 
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#10b981',
+        primaryTextColor: '#1f2937',
+        primaryBorderColor: '#059669',
+        lineColor: '#6b7280',
+        secondaryColor: '#f3f4f6',
+        tertiaryColor: '#e5e7eb',
+        background: '#ffffff',
+        mainBkg: '#ffffff',
+        secondBkg: '#f9fafb',
+        tertiaryBkg: '#f3f4f6'
+      },
+      flowchart: {
+        curve: 'basis',
+        padding: 20
+      },
+      sequence: {
+        actorMargin: 50,
+        width: 150,
+        height: 65,
+        boxMargin: 10,
+        boxTextMargin: 5,
+        noteMargin: 10,
+        messageMargin: 35
+      }
+    });
+
+    // Добавляем кнопки скачивания диаграмм
+    document.addEventListener('DOMContentLoaded', function() {
+      const diagrams = document.querySelectorAll('.mermaid');
+      diagrams.forEach((diagram, index) => {
+        const container = diagram.parentElement;
+        const downloadBtn = document.createElement('button');
+        downloadBtn.className = 'mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors';
+        downloadBtn.textContent = '📥 Скачать как PNG';
+        downloadBtn.onclick = () => downloadDiagram(diagram, `diagram-${index + 1}`);
+        container.appendChild(downloadBtn);
+      });
+    });
+
+    function downloadDiagram(diagramElement, filename) {
+      const svg = diagramElement.querySelector('svg');
+      if (!svg) return;
+
+      // Создаем canvas для конвертации SVG в PNG
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+      const svgUrl = URL.createObjectURL(svgBlob);
+      
+      const img = new Image();
+      img.onload = function() {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        
+        // Скачиваем PNG
+        canvas.toBlob(function(blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${filename}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
         });
-
-        // Функция для скачивания диаграммы как PNG
-        function downloadDiagram(diagramId, filename) {
-            const svg = document.querySelector(`#${diagramId} svg`);
-            if (!svg) {
-                alert('Диаграмма еще не загрузилась. Попробуйте через несколько секунд.');
-                return;
-            }
-
-            // Создаем canvas для конвертации SVG в PNG
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            const svgData = new XMLSerializer().serializeToString(svg);
-            const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
-            const svgUrl = URL.createObjectURL(svgBlob);
-            
-            const img = new Image();
-            img.onload = function() {
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.fillStyle = 'white';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0);
-                
-                // Скачиваем PNG
-                canvas.toBlob(function(blob) {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `multiagent-rag-${filename}.png`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                });
-                
-                URL.revokeObjectURL(svgUrl);
-            };
-            img.src = svgUrl;
-        }
-    </script>
+        
+        URL.revokeObjectURL(svgUrl);
+      };
+      img.src = svgUrl;
+    }
+  </script>
 </body>
 </html>
