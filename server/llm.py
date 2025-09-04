@@ -1,11 +1,12 @@
 import os, json, httpx
 import asyncio
+from . import config
 
 class LLM:
     def __init__(self, model=None, provider=None, key=None):
-        self.model = model or os.environ.get("LLM_MODEL", "gpt-4o-mini")
+        self.model = model or config.LLM_MODEL
         self.provider = provider or os.environ.get("LLM_PROVIDER", "openai")
-        self.key = key or os.environ.get("OPENAI_API_KEY")
+        self.key = key or config.OPENAI_API_KEY
 
     async def complete(self, system: str, user: str) -> str:
         if self.provider == "stub":

@@ -4,6 +4,7 @@ from typing import List, Tuple, Optional, Set, Dict, Any
 from rank_bm25 import BM25Okapi
 import faiss
 from openai import OpenAI
+from . import config # Импортируем наш новый конфиг
 
 # --- Константы и Клиенты ---
 DATA_DIR = os.environ.get("DATA_DIR", "data")
@@ -14,24 +15,14 @@ EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# Глобальная переменная для клиента, чтобы не создавать его каждый раз
-openai_client = None
+# Инициализация клиента OpenAI (теперь безопасная)
+openai_client = OpenAI(api_key=config.OPENAI_API_KEY)
 
-def get_openai_client():
-    """Инициализирует и возвращает клиент OpenAI (ленивая инициализация)."""
-    global openai_client
-    if openai_client is None:
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("CRITICAL: OPENAI_API_KEY not found in environment for OpenAI client.")
-        openai_client = OpenAI(api_key=api_key)
-    return openai_client
 
 # --- Утилиты ---
 
 def _get_embedding(text: str):
-    client = get_openai_client()
-    response = client.embeddings.create(input=[text.replace("\n", " ")], model=EMBEDDING_MODEL)
+    response = openai_client.embeddings.create(input=[text.replace("\n", " ")], model=config.EMBEDDING_MODEL)
     return response.data[0].embedding
 
 def _semantic_chunking(text: str, min_chunk_size=200, max_chunk_size=400):
