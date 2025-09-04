@@ -29,8 +29,9 @@ def run_extraction(text_or_url: str, prompt: Optional[str]=None, examples: Optio
              ) for e in examples]
 
     # --- DEBUG LANGEXTRACT PARAMS ---
-    lx_model_id = os.getenv("LX_MODEL_ID", "gpt-5-mini")
-    api_key = os.getenv("OPENAI_API_KEY")
+    from . import config
+    lx_model_id = config.LX_MODEL_ID
+    api_key = config.OPENAI_API_KEY
     print("="*50)
     print("🔍 DEBUG: LangExtract Parameters")
     print(f"  - Model ID: {lx_model_id}")
