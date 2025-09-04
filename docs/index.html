@@ -13,11 +13,11 @@
       <div>
         <h1 class="text-2xl font-bold">🚀 MultiAgent‑RAG Pro</h1>
         <div class="text-xs text-emerald-600 font-medium">
-                     ✅ v4.6 - OPTIMIZED & CLEAN! | 🕐 Обновлено: 2024-12-20 00:05
+                     ✅ v4.6.1 - UI BUTTON FIX! | 🕐 Обновлено: 2024-12-20 00:10
         </div>
       </div>
       <div class="text-right">
-        <div class="text-xs text-slate-500">API: <code id="apiBase" class="mono"></code></div>
+      <div class="text-xs text-slate-500">API: <code id="apiBase" class="mono"></code></div>
         <div class="text-xs text-slate-400" id="buildInfo">Build: AUTO-UPDATE-20250904</div>
       </div>
     </header>
@@ -34,12 +34,12 @@
           </div>
           <div>
             <label class="text-sm block mb-2 font-medium">📁 Загрузить файлы в базу знаний</label>
-            <div class="flex items-center gap-2 mb-3">
-              <input id="files" type="file" multiple accept=".txt,.md,.pdf,.doc,.docx,.rtf,.csv,.json,.xml,.html" class="flex-1 border rounded px-3 py-2 text-sm min-h-[40px]">
-              <button class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-colors font-medium text-sm whitespace-nowrap h-[40px] flex items-center justify-center" onclick="ingestFilesWithFeedback()">
+            <div class="flex items-stretch gap-3 mb-3">
+              <input id="files" type="file" multiple accept=".txt,.md,.pdf,.doc,.docx,.rtf,.csv,.json,.xml,.html" class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+              <button class="px-6 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 transition-colors font-medium text-sm whitespace-nowrap flex-shrink-0 shadow-sm" onclick="ingestFilesWithFeedback()">
                 📤 Загрузить
               </button>
-            </div>
+          </div>
             <div class="text-xs text-slate-600 bg-blue-50 p-2 rounded">
               💡 <strong>Поддерживаемые форматы:</strong> TXT, MD, PDF, DOC, DOCX, RTF, CSV, JSON, XML, HTML<br>
               🚀 <strong>Что происходит:</strong> Файлы загружаются → извлекается текст → индексируется → можно искать через Agentic RAG
