@@ -102,17 +102,18 @@ class MultiAgent:
         print(f"⏱️ Planning took: {time.time() - step_start:.2f}s")
         yield {"type": "plan", "data": plan}
         
-        # Шаг 2: Извлечение сущностей (не потоковое)
+        # Шаг 2: Извлечение сущностей (ВРЕМЕННО ОТКЛЮЧЕНО для скорости)
         step_start = time.time()
         extracted_entities = []
-        if auto_extract and not entities_filter:
-            try:
-                extraction_result = run_extraction(query, "Извлеки людей, компании, места, события и даты из этого вопроса")
-                extracted_entities = [item.get("text", "") for item in extraction_result.get("items", []) if item.get("text")]
-                entities_filter = extracted_entities[:10]  # Ограничиваем до 10 сущностей
-            except Exception as e:
-                print(f"Ошибка извлечения сущностей: {e}")
-        print(f"⏱️ Entity extraction took: {time.time() - step_start:.2f}s")
+        # ОТКЛЮЧЕНО: автоматическое извлечение сущностей из вопроса (слишком медленно)
+        # if auto_extract and not entities_filter:
+        #     try:
+        #         extraction_result = run_extraction(query, "Извлеки людей, компании, места, события и даты из этого вопроса")
+        #         extracted_entities = [item.get("text", "") for item in extraction_result.get("items", []) if item.get("text")]
+        #         entities_filter = extracted_entities[:10]  # Ограничиваем до 10 сущностей
+        #     except Exception as e:
+        #         print(f"Ошибка извлечения сущностей: {e}")
+        print(f"⏱️ Entity extraction took: {time.time() - step_start:.2f}s (SKIPPED for performance)")
         yield {"type": "entities", "data": extracted_entities}
         
         # Шаг 3: Гибридный поиск
