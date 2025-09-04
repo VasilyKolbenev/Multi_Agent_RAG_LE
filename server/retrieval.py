@@ -25,21 +25,80 @@ def _get_embedding(text: str):
     response = openai_client.embeddings.create(input=[text.replace("\n", " ")], model=config.EMBEDDING_MODEL)
     return response.data[0].embedding
 
-def _semantic_chunking(text: str, min_chunk_size=200, max_chunk_size=400):
-    # Простой семантический чанкинг по параграфам
+def _semantic_chunking(text: str, max_chunk_size=1500):
+    """
+    Разбивает текст на чанки, безопасные для embedding модели.
+    
+    Учитывая лимит text-embedding-3-small в 8192 токена,
+    мы используем консервативный размер чанка в 1500 символов (~375 токенов).
+    """
+    # Если весь текст помещается в один чанк
+    if len(text) <= max_chunk_size:
+        return [text]
+    
     chunks = []
+    
+    # Сначала пробуем разбить по абзацам
+    paragraphs = text.split('\n\n')
     current_chunk = ""
-    for paragraph in text.split('\n\n'):
+    
+    for paragraph in paragraphs:
         if not paragraph.strip():
             continue
-        if len(current_chunk) + len(paragraph) < max_chunk_size:
-            current_chunk += paragraph + "\n\n"
-        else:
-            if len(current_chunk) > min_chunk_size:
+            
+        # Если абзац слишком большой, разбиваем его по предложениям
+        if len(paragraph) > max_chunk_size:
+            # Сохраняем текущий чанк, если он есть
+            if current_chunk:
                 chunks.append(current_chunk.strip())
-            current_chunk = paragraph + "\n\n"
-    if len(current_chunk) > min_chunk_size:
+                current_chunk = ""
+            
+            # Разбиваем большой абзац по предложениям
+            sentences = re.split(r'[.!?]+', paragraph)
+            for sentence in sentences:
+                if not sentence.strip():
+                    continue
+                    
+                sentence = sentence.strip() + '.'
+                
+                # Если предложение слишком длинное, принудительно разрезаем
+                if len(sentence) > max_chunk_size:
+                    # Разбиваем по словам
+                    words = sentence.split()
+                    temp_chunk = ""
+                    for word in words:
+                        if len(temp_chunk) + len(word) + 1 <= max_chunk_size:
+                            temp_chunk += word + " "
+                        else:
+                            if temp_chunk:
+                                chunks.append(temp_chunk.strip())
+                            temp_chunk = word + " "
+                    if temp_chunk:
+                        chunks.append(temp_chunk.strip())
+                else:
+                    # Обычное предложение
+                    if len(current_chunk) + len(sentence) + 1 <= max_chunk_size:
+                        current_chunk += sentence + " "
+                    else:
+                        if current_chunk:
+                            chunks.append(current_chunk.strip())
+                        current_chunk = sentence + " "
+        else:
+            # Обычный абзац
+            if len(current_chunk) + len(paragraph) + 2 <= max_chunk_size:
+                current_chunk += paragraph + "\n\n"
+            else:
+                if current_chunk:
+                    chunks.append(current_chunk.strip())
+                current_chunk = paragraph + "\n\n"
+    
+    # Добавляем последний чанк
+    if current_chunk:
         chunks.append(current_chunk.strip())
+    
+    # Фильтруем слишком короткие чанки (менее 50 символов)
+    chunks = [chunk for chunk in chunks if len(chunk) >= 50]
+    
     return chunks
 
 # --- Основной класс ---
