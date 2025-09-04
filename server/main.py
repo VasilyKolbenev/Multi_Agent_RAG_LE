@@ -1,6 +1,6 @@
 import os, uuid, json
 from typing import List, Optional
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from sse_starlette.sse import EventSourceResponse
@@ -294,7 +294,7 @@ async def langextract_text(task_prompt: str = Form(None), text: str = Form(...),
         return JSONResponse(status_code=500, content={"message": "Internal Server Error during extraction"})
 
 @app.post("/langextract")
-async def langextract_unified(request_data: dict):
+async def langextract_unified(request_data: dict = Body(...)):
     """Унифицированный эндпоинт для LangExtract с JSON входом"""
     try:
         text = request_data.get('text', '')
