@@ -259,6 +259,125 @@
       </div>
     </div>
 
+    <!-- Enterprise Architecture -->
+    <div class="diagram-container">
+      <h3 class="text-xl font-semibold mb-4 text-center">🏢 Enterprise RAG Architecture</h3>
+      <div class="mermaid">
+        graph TB
+          subgraph "🏢 Enterprise Data Sources"
+            PG[("🐘 PostgreSQL<br/>BigData<br/>Millions of rows")]
+            CONF["📚 Confluence<br/>Knowledge Base"]
+            WIKI["📖 Wiki Systems<br/>Documentation"]
+            FILES["📁 File Systems<br/>Documents"]
+          end
+          
+          subgraph "🔄 Data Connectors Layer"
+            PG_CONN["🔌 PostgreSQL<br/>Connector"]
+            CONF_CONN["🔌 Confluence<br/>API Connector"]
+            WIKI_CONN["🔌 Wiki<br/>API Connector"]
+            FILE_CONN["🔌 File System<br/>Connector"]
+          end
+          
+          subgraph "🧠 MultiAgent-RAG Core"
+            ETL["⚙️ ETL Pipeline<br/>Extract & Transform"]
+            LANGX["🏷️ LangExtract<br/>Entity Extraction"]
+            VECTOR["🧮 Vector Store<br/>FAISS + BM25"]
+            AGENTS["🤖 Agentic RAG<br/>Query Processing"]
+          end
+          
+          subgraph "🎯 Enterprise Features"
+            SEARCH["🔍 Unified Search<br/>Across all sources"]
+            ANALYTICS["📊 Business Intelligence<br/>Entity Analytics"]
+            INSIGHTS["💡 Data Insights<br/>AI-driven analysis"]
+            ALERTS["🔔 Smart Alerts<br/>Anomaly detection"]
+          end
+          
+          subgraph "👥 User Interfaces"
+            WEB["🌐 Web Dashboard<br/>Current UI"]
+            API["🔗 REST API<br/>Integration"]
+            SLACK["💬 Slack Bot<br/>Chat interface"]
+            TEAMS["👔 MS Teams<br/>Enterprise chat"]
+          end
+          
+          PG --> PG_CONN
+          CONF --> CONF_CONN
+          WIKI --> WIKI_CONN
+          FILES --> FILE_CONN
+          
+          PG_CONN --> ETL
+          CONF_CONN --> ETL
+          WIKI_CONN --> ETL
+          FILE_CONN --> ETL
+          
+          ETL --> LANGX
+          LANGX --> VECTOR
+          VECTOR --> AGENTS
+          
+          AGENTS --> SEARCH
+          AGENTS --> ANALYTICS
+          AGENTS --> INSIGHTS
+          AGENTS --> ALERTS
+          
+          SEARCH --> WEB
+          ANALYTICS --> API
+          INSIGHTS --> SLACK
+          ALERTS --> TEAMS
+          
+          style PG fill:#e1f5fe
+          style CONF fill:#f3e5f5
+          style AGENTS fill:#fff3e0
+          style SEARCH fill:#e8f5e8
+      </div>
+    </div>
+
+    <!-- Enterprise Use Cases -->
+    <div class="diagram-container">
+      <h3 class="text-xl font-semibold mb-4 text-center">💼 Enterprise Use Cases</h3>
+      <div class="mermaid">
+        mindmap
+          root)🏢 Enterprise RAG(
+            (📊 PostgreSQL BigData)
+              Финансовая аналитика
+                Аномальные транзакции
+                Клиентская сегментация
+                Риск-анализ
+              Маркетинговая аналитика
+                Поведенческие паттерны
+                Кросс-продажи
+                Retention анализ
+              Операционная аналитика
+                KPI мониторинг
+                Process mining
+                Автоматизация
+            (📚 Confluence/Wiki)
+              Техническая поддержка
+                Troubleshooting
+                Knowledge base
+                Expert finding
+              Onboarding
+                Learning paths
+                Documentation
+                Best practices
+              Compliance
+                Policy tracking
+                Audit trails
+                Risk management
+            (🤖 AI-Driven Insights)
+              Predictive Analytics
+                Trend forecasting
+                Anomaly detection
+                Capacity planning
+              Automated Reporting
+                Executive dashboards
+                Alert systems
+                Performance metrics
+              Decision Support
+                Recommendation engine
+                What-if analysis
+                Strategic planning
+      </div>
+    </div>
+
     <!-- Performance & Optimization -->
     <div class="diagram-container">
       <h3 class="text-xl font-semibold mb-4 text-center">⚡ Оптимизации производительности</h3>
@@ -304,8 +423,9 @@
     </div>
 
     <footer class="text-center mt-8 text-slate-500 text-sm">
-      <p>🏗️ Архитектурные диаграммы MultiAgent-RAG Pro v4.5</p>
-      <p>📅 Создано: 2024-12-20 | 🔄 Последнее обновление: v4.5 - SIMPLIFIED & OPTIMIZED</p>
+      <p>🏗️ Архитектурные диаграммы MultiAgent-RAG Pro v4.7.1</p>
+      <p>📅 Создано: 2024-12-20 | 🔄 Последнее обновление: v4.7.1 - ENTERPRISE + LANGEXTRACT FIX</p>
+      <p>🏢 Включает Enterprise архитектуру с поддержкой PostgreSQL BigData и Confluence/Wiki интеграции</p>
     </footer>
 
   </div>
