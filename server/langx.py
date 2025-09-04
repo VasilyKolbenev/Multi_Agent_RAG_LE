@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Generator
 
 import langextract as lx
 
-MODEL_ID = os.environ.get("LX_MODEL_ID", "gpt-5-mini")  # Убираем openai: префикс
+MODEL_ID = os.environ.get("LX_MODEL_ID", "gpt-4o-mini")  # Используем поддерживаемую модель
 
 DEFAULT_PROMPT = textwrap.dedent("""Извлеки из текста именованные сущности (organization, person, date, money) и отношения между ними.
 Строго используй текст источника (не перефразируй). Верни атрибуты: type, value, optional_attrs.

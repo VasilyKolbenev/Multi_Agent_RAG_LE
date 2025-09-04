@@ -46,7 +46,7 @@ print(f"   - OPENAI_API_KEY: Loaded (sk-proj-...{OPENAI_API_KEY[-4:]})")
 # Остальные настройки
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-5-mini")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
-LX_MODEL_ID = os.getenv("LX_MODEL_ID", LLM_MODEL)  # Убираем openai: префикс для LangExtract
+LX_MODEL_ID = os.getenv("LX_MODEL_ID", "gpt-4o-mini")  # Используем поддерживаемую LangExtract модель
 
 print(f"   - LLM_MODEL: {LLM_MODEL}")
 print(f"   - EMBEDDING_MODEL: {EMBEDDING_MODEL}")
