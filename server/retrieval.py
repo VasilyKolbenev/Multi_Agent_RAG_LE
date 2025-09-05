@@ -167,7 +167,7 @@ class HybridCorpus:
         if tokenized_chunks:
             self.bm25 = BM25Okapi(tokenized_chunks)
 
-    def search(self, query: str, k: int = 10) -> List[Dict[str, Any]]:
+    def search(self, query: str, k: int = 10, allowed_docs: Optional[Set[str]] = None) -> List[Dict[str, Any]]:
         # 1. Dense Search (FAISS)
         query_embedding = np.array([_get_embedding(query)]).astype('float32')
         distances, ids = self.index.search(query_embedding, k)
@@ -188,7 +188,9 @@ class HybridCorpus:
         for chunk_id in merged_ids:
             if chunk_id in self.chunks:
                 chunk_data = self.chunks[chunk_id]
-                final_chunks.append({"chunk_id": chunk_id, "doc_id": chunk_data['doc_id'], "text": chunk_data['text']})
+                # Фильтрация по allowed_docs если указана
+                if allowed_docs is None or chunk_data['doc_id'] in allowed_docs:
+                    final_chunks.append({"chunk_id": chunk_id, "doc_id": chunk_data['doc_id'], "text": chunk_data['text']})
         
         return final_chunks[:k]
 

@@ -115,7 +115,9 @@ class MultiAgent:
         
         hits = self.corpus.search(query, k=k, allowed_docs=allowed_docs)
         ctx, cites = "", []
-        for doc_id, text, score in hits:
+        for hit in hits:
+            doc_id = hit['doc_id']
+            text = hit['text']
             snippet = text[:1200].replace("\n"," ")
             ctx += f"\n[DOC {doc_id}] {snippet}"
             cites.append(doc_id)
@@ -128,7 +130,7 @@ class MultiAgent:
             "answer": answer, 
             "critique": critique, 
             "citations": cites,
-            "hits": [{"doc_id": d, "score": s} for d,_,s in [(h[0],h[1],h[2]) for h in hits]],
+            "hits": [{"doc_id": h['doc_id'], "text": h['text'][:200]} for h in hits],
             "extracted_entities": extracted_entities,
             "entities_used": entities_filter or []
         }
