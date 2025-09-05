@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/multiagent-rag-pro/',
+  base: '/Multi_Agent_RAG_LE/',
   build: {
     outDir: '../docs-react',
     emptyOutDir: true,
