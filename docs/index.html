@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>🚀 MultiAgent‑RAG Pro v4.8.4 - BUTTON FIX!</title>
+  <title>🚀 MultiAgent‑RAG Pro v4.8.5 - DEEP DEBUG!</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style> .mono{font-family: ui-monospace, Menlo, Consolas, monospace;} </style>
 </head>
@@ -13,7 +13,7 @@
       <div>
         <h1 class="text-2xl font-bold">🚀 MultiAgent‑RAG Pro</h1>
         <div class="text-xs text-emerald-600 font-medium">
-                     ✅ v4.8.4 - BUTTON FIX! | 🕐 Обновлено: 2024-12-20 02:00
+                     ✅ v4.8.5 - DEEP DEBUG! | 🕐 Обновлено: 2024-12-20 02:15
         </div>
       </div>
       <div class="text-right">
@@ -346,12 +346,7 @@ async function ingestFolder(){
   const j = await r.json(); alert('Импортировано');
 }
 
-async function search(){
-  const q = document.getElementById('q').value || ''; const ents = document.getElementById('entities').value || '';
-  const r = await fetch(API + '/search?q=' + encodeURIComponent(q) + '&entities=' + encodeURIComponent(ents));
-  const j = await r.json(); const ul = document.getElementById('hits'); ul.innerHTML = '';
-  j.forEach(h=>{ const li=document.createElement('li'); li.textContent=h.doc_id + ' (score ' + h.score.toFixed(2)+')'; ul.appendChild(li); });
-}
+// Старая функция search() удалена - используется новая версия ниже
 async function ask(){
   const q = document.getElementById('q').value || ''; const ents = document.getElementById('entities').value || '';
   const r = await fetch(API + '/ask?q=' + encodeURIComponent(q) + '&entities=' + encodeURIComponent(ents));
@@ -2163,6 +2158,18 @@ function initializeEnterpriseStats() {
 
 // Привязываем обработчики кнопок
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('🚀 DOM loaded, initializing...');
+  
+  // === ПРОВЕРКА ДОСТУПНОСТИ ФУНКЦИЙ ===
+  console.log('🔍 Checking function availability:');
+  console.log('  - askIntelligent:', typeof askIntelligent);
+  console.log('  - search:', typeof search);
+  console.log('  - searchByEntities:', typeof searchByEntities);
+  console.log('  - loadFileForLangExtract:', typeof loadFileForLangExtract);
+  console.log('  - processManualText:', typeof processManualText);
+  console.log('  - ingestTextWithEntities:', typeof ingestTextWithEntities);
+  console.log('  - ingestFilesWithFeedback:', typeof ingestFilesWithFeedback);
+  
   // Инициализируем Drag & Drop
   initializeDragAndDrop();
   
