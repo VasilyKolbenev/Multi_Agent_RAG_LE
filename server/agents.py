@@ -133,6 +133,13 @@ class MultiAgent:
             "entities_used": entities_filter or []
         }
 
+    async def ask(self, query: str, k: int = 5, entities_filter: Optional[List[str]] = None) -> Dict[str, Any]:
+        """
+        Метод для совместимости с API endpoints.
+        Простая версия без потокового вывода.
+        """
+        return await self.run(query, k, entities_filter, auto_extract=True)
+
     async def stream(self, query: str, k: int = 20, entities_filter: Optional[List[str]] = None, auto_extract: bool = True):
         """Потоковая версия RAG-ответа."""
         import time

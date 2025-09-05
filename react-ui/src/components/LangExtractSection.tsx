@@ -31,7 +31,13 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
     }
   }
 
-  const readFileAsText = (file: File): Promise<string> => {
+  const readFileAsText = async (file: File): Promise<string> => {
+    // Проверяем тип файла
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      return await parsePDF(file)
+    }
+    
+    // Для остальных файлов используем стандартное чтение
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = (e) => {
@@ -43,8 +49,36 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
         }
       }
       reader.onerror = () => reject(new Error('File reading error'))
-      reader.readAsText(file)
+      reader.readAsText(file, 'utf-8')
     })
+  }
+
+  const parsePDF = async (file: File): Promise<string> => {
+    try {
+      // Динамически загружаем PDF.js
+      const pdfjsLib = await import('pdfjs-dist')
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`
+      
+      const arrayBuffer = await file.arrayBuffer()
+      const pdf = await pdfjsLib.getDocument(arrayBuffer).promise
+      
+      let fullText = ''
+      
+      // Извлекаем текст из всех страниц
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i)
+        const textContent = await page.getTextContent()
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ')
+        fullText += `\n--- Страница ${i} ---\n${pageText}\n`
+      }
+      
+      return fullText.trim()
+    } catch (error) {
+      console.error('PDF parsing error:', error)
+      throw new Error(`Ошибка парсинга PDF: ${error}`)
+    }
   }
 
   return (
