@@ -168,6 +168,10 @@ class HybridCorpus:
             self.bm25 = BM25Okapi(tokenized_chunks)
 
     def search(self, query: str, k: int = 10, allowed_docs: Optional[Set[str]] = None) -> List[Dict[str, Any]]:
+        # Проверяем, что индекс существует
+        if self.index is None or len(self.chunks) == 0:
+            return []
+            
         # 1. Dense Search (FAISS)
         query_embedding = np.array([_get_embedding(query)]).astype('float32')
         distances, ids = self.index.search(query_embedding, k)

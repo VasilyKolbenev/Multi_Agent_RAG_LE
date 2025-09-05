@@ -75,7 +75,27 @@ async def ingest_files(files: List[UploadFile] = File(...)):
         fp = os.path.join(base, f.filename)
         with open(fp, "wb") as out: out.write(await f.read())
         saved.append(f.filename)
-    corpus.load_folder(base)
+    
+    # Загружаем каждый файл отдельно через ingest_text
+    for filename in saved:
+        filepath = os.path.join(base, filename)
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+                doc_id = f"file_{filename}_{uuid.uuid4().hex[:8]}"
+                corpus.ingest_text(doc_id, content)
+        except Exception as e:
+            print(f"Error loading file {filename}: {e}")
+            # Пробуем другие кодировки для файлов
+            try:
+                with open(filepath, 'r', encoding='cp1251') as f:
+                    content = f.read()
+                    doc_id = f"file_{filename}_{uuid.uuid4().hex[:8]}"
+                    corpus.ingest_text(doc_id, content)
+            except Exception as e2:
+                print(f"Error loading file {filename} with cp1251: {e2}")
+                continue
+    
     append_trace({"type":"ingest_files", "files":saved})
     return {"ok": True, "files": saved, "count": len(saved)}
 
@@ -92,7 +112,26 @@ async def ingest_unified(files: List[UploadFile] = File(None), text: str = Form(
             with open(fp, "wb") as out: 
                 out.write(await f.read())
             results.append({"type": "file", "filename": f.filename})
-        corpus.load_folder(base)
+        
+        # Загружаем каждый файл отдельно через ingest_text
+        for f in files:
+            try:
+                filepath = os.path.join(base, f.filename)
+                with open(filepath, 'r', encoding='utf-8') as file_content:
+                    content = file_content.read()
+                    doc_id = f"file_{f.filename}_{uuid.uuid4().hex[:8]}"
+                    corpus.ingest_text(doc_id, content)
+            except Exception as e:
+                print(f"Error loading file {f.filename}: {e}")
+                # Пробуем другие кодировки для файлов
+                try:
+                    with open(filepath, 'r', encoding='cp1251') as file_content:
+                        content = file_content.read()
+                        doc_id = f"file_{f.filename}_{uuid.uuid4().hex[:8]}"
+                        corpus.ingest_text(doc_id, content)
+                except Exception as e2:
+                    print(f"Error loading file {f.filename} with cp1251: {e2}")
+                    continue
     
     # Обрабатываем текст, если он есть
     if text and text.strip():
@@ -101,8 +140,8 @@ async def ingest_unified(files: List[UploadFile] = File(None), text: str = Form(
         
         try:
             import hashlib
-            chunks = corpus.ingest_text(text, doc_id)
-            results.append({"type": "text", "doc_id": doc_id, "chunks": len(chunks)})
+            corpus.ingest_text(doc_id, text)
+            results.append({"type": "text", "doc_id": doc_id})
         except Exception as e:
             import traceback
             print(f"Error during text ingestion: {e}")
