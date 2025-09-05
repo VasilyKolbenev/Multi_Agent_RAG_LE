@@ -20,10 +20,42 @@ class AgenticRAGSystem:
         self.graph_index = graph_index
         logger.info("🤖 AgenticRAGSystem initialized")
     
+    async def process_query(self, query: str, max_iterations: int = 5, confidence_threshold: float = 0.7):
+        """
+        Обработка запроса через агентную систему
+        Возвращает структурированный результат для API
+        """
+        try:
+            # Импортируем здесь, чтобы избежать циклических импортов
+            from .agents import MultiAgent
+            
+            # Создаем временный агент для обработки
+            agent = MultiAgent(self.corpus, self.graph_index)
+            
+            # Получаем результат от агента
+            result = await agent.ask(query, k=10)
+            
+            return {
+                "query": query,
+                "answer": result.get("answer", "Ответ не найден"),
+                "sources": result.get("sources", []),
+                "iterations_used": 1,
+                "confidence": confidence_threshold,
+                "success": True
+            }
+                
+        except Exception as e:
+            logger.error(f"❌ Agentic query processing error: {e}")
+            return {
+                "query": query,
+                "error": str(e),
+                "success": False
+            }
+
     async def agentic_search(self, query: str, **kwargs) -> AsyncGenerator[str, None]:
         """
         Агентный поиск с итеративным улучшением
-        Пока что делегируем существующему MultiAgent
+        Для потокового API
         """
         try:
             # Импортируем здесь, чтобы избежать циклических импортов
