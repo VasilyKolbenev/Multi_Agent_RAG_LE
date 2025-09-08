@@ -83,10 +83,22 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-      <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-        <Brain className="w-5 h-5" />
-        LangExtract - Извлечение сущностей
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
+          <Brain className="w-5 h-5" />
+          LangExtract - Извлечение сущностей
+        </h2>
+        <div className="bg-violet-100 text-violet-800 text-xs font-medium px-2.5 py-0.5 rounded">
+          Шаг 2
+        </div>
+      </div>
+      
+      <div className="bg-violet-50 border border-violet-200 rounded-md p-3 mb-4">
+        <p className="text-sm text-violet-800">
+          <strong>🧠 Второй шаг:</strong> Извлеките ключевые сущности (имена, компании, места, даты) из загруженных документов. 
+          Это поможет улучшить качество поиска на следующем этапе.
+        </p>
+      </div>
       
       <div className="space-y-4">
         {/* File Upload */}

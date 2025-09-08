@@ -23,10 +23,22 @@ export default function SearchSection({ onSearch, loading }: SearchSectionProps)
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-      <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-        <Search className="w-5 h-5" />
-        Поиск по базе знаний
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
+          <Search className="w-5 h-5" />
+          Поиск по базе знаний
+        </h2>
+        <div className="bg-emerald-100 text-emerald-800 text-xs font-medium px-2.5 py-0.5 rounded">
+          Шаг 3
+        </div>
+      </div>
+      
+      <div className="bg-emerald-50 border border-emerald-200 rounded-md p-3 mb-4">
+        <p className="text-sm text-emerald-800">
+          <strong>🚀 Финальный шаг:</strong> Теперь вы можете задавать вопросы системе! 
+          Используйте умный ответ для получения развернутого анализа или найдите конкретные фрагменты.
+        </p>
+      </div>
       
       <div className="space-y-4">
         {/* Search Query */}

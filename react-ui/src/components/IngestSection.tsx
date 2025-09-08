@@ -60,10 +60,22 @@ export default function IngestSection({ onIngest, loading }: IngestSectionProps)
     <div className="space-y-6">
       {/* Text Ingest */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-        <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-          <FileText className="w-5 h-5" />
-          Добавить текст
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Добавить текст
+          </h2>
+          <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+            Шаг 1
+          </div>
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
+          <p className="text-sm text-blue-800">
+            <strong>💡 Начните здесь:</strong> Добавьте документы в базу знаний, чтобы система могла с ними работать. 
+            После успешной загрузки вы автоматически перейдете к следующему шагу.
+          </p>
+        </div>
         
         <div className="space-y-4">
           <div>
@@ -109,10 +121,15 @@ export default function IngestSection({ onIngest, loading }: IngestSectionProps)
 
       {/* File Ingest */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-        <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-          <Upload className="w-5 h-5" />
-          Загрузить файлы
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
+            <Upload className="w-5 h-5" />
+            Загрузить файлы
+          </h2>
+          <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+            Шаг 1
+          </div>
+        </div>
         
         <div className="space-y-4">
           {/* Drag & Drop Zone */}
