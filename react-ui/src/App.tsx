@@ -276,35 +276,61 @@ function App() {
         </nav>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Panel - Input */}
-          <div className="lg:col-span-2 space-y-6">
-            {activeTab === 'search' && (
-              <SearchSection onSearch={handleSearch} loading={loading} />
-            )}
-            {activeTab === 'ingest' && (
-              <IngestSection onIngest={handleIngest} loading={loading} />
-            )}
-            {activeTab === 'langextract' && (
-              <LangExtractSection onExtract={handleLangExtract} loading={loading} />
-            )}
-          </div>
-
-          {/* Right Panel - Guide & Results */}
+        {activeTab === 'search' ? (
+          /* Search Layout - Full Width */
           <div className="space-y-6">
-            <WorkflowStats 
-              hasDocuments={workflow.hasDocuments}
-              hasEntities={workflow.hasEntities}
-              completedSteps={workflow.completedSteps}
-            />
-            <WorkflowGuide 
-              currentStep={workflow.currentStep}
-              hasDocuments={workflow.hasDocuments}
-              hasEntities={workflow.hasEntities}
-            />
-            <ResultsSection results={results} loading={loading} activeTab={activeTab} />
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Search Form */}
+              <div className="lg:col-span-3">
+                <SearchSection onSearch={handleSearch} loading={loading} />
+              </div>
+              
+              {/* Workflow Stats - Compact */}
+              <div>
+                <WorkflowStats 
+                  hasDocuments={workflow.hasDocuments}
+                  hasEntities={workflow.hasEntities}
+                  completedSteps={workflow.completedSteps}
+                />
+              </div>
+            </div>
+            
+            {/* Search Results - Full Width */}
+            <div className="w-full">
+              <ResultsSection results={results} loading={loading} activeTab={activeTab} />
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Other Tabs Layout - 3 Column */
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Panel - Input */}
+            <div className="lg:col-span-2 space-y-6">
+              {activeTab === 'ingest' && (
+                <IngestSection onIngest={handleIngest} loading={loading} />
+              )}
+              {activeTab === 'langextract' && (
+                <LangExtractSection onExtract={handleLangExtract} loading={loading} />
+              )}
+            </div>
+
+            {/* Right Panel - Guide & Results */}
+            <div className="space-y-6">
+              <WorkflowStats 
+                hasDocuments={workflow.hasDocuments}
+                hasEntities={workflow.hasEntities}
+                completedSteps={workflow.completedSteps}
+              />
+              <WorkflowGuide 
+                currentStep={workflow.currentStep}
+                hasDocuments={workflow.hasDocuments}
+                hasEntities={workflow.hasEntities}
+              />
+              {(activeTab === 'ingest' || activeTab === 'langextract') && (
+                <ResultsSection results={results} loading={loading} activeTab={activeTab} />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

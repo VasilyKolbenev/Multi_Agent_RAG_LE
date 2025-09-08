@@ -423,3 +423,113 @@ async def extract_pdf_text(file: UploadFile = File(...)):
     except Exception as e:
         print(f"Ошибка обработки PDF: {e}")
         return JSONResponse({"error": f"Ошибка обработки PDF: {str(e)}"}, status_code=500)
+
+@app.post("/api/extract-text")
+async def extract_text(file: UploadFile = File(...)):
+    """Извлечение текста из различных форматов файлов"""
+    try:
+        filename = file.filename.lower()
+        content = await file.read()
+        
+        # PDF файлы
+        if filename.endswith('.pdf'):
+            try:
+                from pypdf import PdfReader
+                import io
+                
+                pdf_file = io.BytesIO(content)
+                pdf_reader = PdfReader(pdf_file)
+                
+                text = ""
+                for page_num, page in enumerate(pdf_reader.pages, 1):
+                    page_text = page.extract_text()
+                    if page_text.strip():
+                        text += f"\n--- Страница {page_num} ---\n{page_text}\n"
+                
+                return JSONResponse({"text": text.strip() or "PDF файл не содержит текста"})
+                
+            except Exception as e:
+                return JSONResponse({"error": f"Ошибка обработки PDF: {str(e)}"}, status_code=500)
+        
+        # DOCX файлы
+        elif filename.endswith('.docx'):
+            try:
+                from docx import Document
+                import io
+                
+                doc_file = io.BytesIO(content)
+                doc = Document(doc_file)
+                
+                text = ""
+                for paragraph in doc.paragraphs:
+                    if paragraph.text.strip():
+                        text += paragraph.text + "\n"
+                
+                return JSONResponse({"text": text.strip() or "DOCX файл не содержит текста"})
+                
+            except ImportError:
+                return JSONResponse({
+                    "error": "Для обработки DOCX требуется установка python-docx"
+                }, status_code=500)
+            except Exception as e:
+                return JSONResponse({"error": f"Ошибка обработки DOCX: {str(e)}"}, status_code=500)
+        
+        # Текстовые файлы с автоопределением кодировки
+        elif filename.endswith(('.txt', '.md', '.rtf', '.csv')):
+            try:
+                import chardet
+                
+                # Определяем кодировку
+                detected = chardet.detect(content)
+                encoding = detected.get('encoding', 'utf-8')
+                confidence = detected.get('confidence', 0)
+                
+                print(f"Detected encoding: {encoding} (confidence: {confidence})")
+                
+                # Пробуем декодировать с определенной кодировкой
+                try:
+                    text = content.decode(encoding)
+                except UnicodeDecodeError:
+                    # Fallback кодировки для русского языка
+                    fallback_encodings = ['utf-8', 'windows-1251', 'cp1251', 'koi8-r']
+                    text = None
+                    
+                    for enc in fallback_encodings:
+                        try:
+                            text = content.decode(enc)
+                            print(f"Successfully decoded with fallback encoding: {enc}")
+                            break
+                        except UnicodeDecodeError:
+                            continue
+                    
+                    if text is None:
+                        text = content.decode('utf-8', errors='replace')
+                        print("Used UTF-8 with error replacement")
+                
+                return JSONResponse({"text": text, "encoding": encoding, "confidence": confidence})
+                
+            except ImportError:
+                # Если chardet не установлен, используем простые fallback'и
+                fallback_encodings = ['utf-8', 'windows-1251', 'cp1251']
+                for encoding in fallback_encodings:
+                    try:
+                        text = content.decode(encoding)
+                        return JSONResponse({"text": text, "encoding": encoding})
+                    except UnicodeDecodeError:
+                        continue
+                
+                # Последний fallback
+                text = content.decode('utf-8', errors='replace')
+                return JSONResponse({"text": text, "encoding": "utf-8-replace"})
+            
+            except Exception as e:
+                return JSONResponse({"error": f"Ошибка обработки текстового файла: {str(e)}"}, status_code=500)
+        
+        else:
+            return JSONResponse({
+                "error": f"Неподдерживаемый формат файла: {filename}"
+            }, status_code=400)
+        
+    except Exception as e:
+        print(f"Ошибка извлечения текста: {e}")
+        return JSONResponse({"error": f"Ошибка извлечения текста: {str(e)}"}, status_code=500)

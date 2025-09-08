@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Brain, FileText, Loader2, Upload, X, CheckCircle } from 'lucide-react'
+import { Brain, Loader2, Upload, X, CheckCircle } from 'lucide-react'
 
 interface LangExtractSectionProps {
   onExtract: (text: string, prompt?: string) => void
@@ -33,12 +33,13 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
     // Обрабатываем каждый файл
     for (const fileItem of newFiles) {
       try {
+        console.log(`Processing file: ${fileItem.file.name}`)
         const text = await readFileAsText(fileItem.file)
         
         setProcessedFiles(prev => {
           const updated = prev.map(f => 
             f.file === fileItem.file 
-              ? { ...f, status: 'completed', text }
+              ? { ...f, status: 'completed' as const, text }
               : f
           )
           // Обновляем объединенный текст после изменения состояния
@@ -52,22 +53,16 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
           return updated
         })
       } catch (error) {
+        console.error(`Error processing file ${fileItem.file.name}:`, error)
         setProcessedFiles(prev => prev.map(f => 
           f.file === fileItem.file 
-            ? { ...f, status: 'error', error: String(error) }
+            ? { ...f, status: 'error' as const, error: `Ошибка обработки: ${String(error)}` }
             : f
         ))
       }
     }
   }
 
-  const updateCombinedText = () => {
-    const completedFiles = processedFiles.filter(f => f.status === 'completed' && f.text)
-    const combined = completedFiles
-      .map(f => `\n=== ${f.file.name} ===\n${f.text}`)
-      .join('\n\n')
-    setCombinedText(combined)
-  }
 
   const removeFile = (fileToRemove: File) => {
     setProcessedFiles(prev => {
@@ -93,7 +88,59 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
       return await parsePDF(file)
     }
     
-    // Для остальных файлов используем стандартное чтение
+    // Для DOCX файлов отправляем на сервер
+    if (file.name.toLowerCase().endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        
+        const response = await fetch('/api/extract-text', {
+          method: 'POST',
+          body: formData
+        })
+        
+        if (response.ok) {
+          const result = await response.json()
+          return result.text || 'Не удалось извлечь текст из документа'
+        }
+      } catch (error) {
+        console.warn('Server text extraction failed:', error)
+      }
+    }
+    
+    // Для текстовых файлов пробуем разные кодировки
+    return await readTextWithEncodingDetection(file)
+  }
+
+  const readTextWithEncodingDetection = async (file: File): Promise<string> => {
+    // Список кодировок для попытки чтения
+    const encodings = ['utf-8', 'windows-1251', 'cp1251', 'koi8-r', 'iso-8859-1']
+    
+    for (const encoding of encodings) {
+      try {
+        const text = await readFileWithEncoding(file, encoding)
+        
+        // Простая проверка на кракозябры - если много вопросительных знаков или спецсимволов
+        const suspiciousChars = text.match(/[�?]/g)
+        const suspiciousRatio = suspiciousChars ? suspiciousChars.length / text.length : 0
+        
+        // Если меньше 5% подозрительных символов, считаем кодировку правильной
+        if (suspiciousRatio < 0.05 && text.length > 0) {
+          console.log(`Successfully read file with encoding: ${encoding}`)
+          return text
+        }
+      } catch (error) {
+        console.warn(`Failed to read with encoding ${encoding}:`, error)
+        continue
+      }
+    }
+    
+    // Если ни одна кодировка не подошла, возвращаем как есть с UTF-8
+    console.warn('Could not detect proper encoding, using UTF-8 as fallback')
+    return await readFileWithEncoding(file, 'utf-8')
+  }
+
+  const readFileWithEncoding = async (file: File, encoding: string): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = (e) => {
@@ -104,8 +151,8 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
           reject(new Error('Failed to read file as text'))
         }
       }
-      reader.onerror = () => reject(new Error('File reading error'))
-      reader.readAsText(file, 'utf-8')
+      reader.onerror = () => reject(new Error(`File reading error with encoding ${encoding}`))
+      reader.readAsText(file, encoding)
     })
   }
 

@@ -13,33 +13,37 @@ export default function ResultsSection({ results, loading, activeTab }: ResultsS
     // Agentic RAG результат
     if (results.answer) {
       return (
-        <div className="space-y-4">
-          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-            <h3 className="font-medium text-emerald-900 mb-2 flex items-center gap-2">
-              <Brain className="w-4 h-4" />
+        <div className="space-y-6">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-emerald-900 mb-4 flex items-center gap-2">
+              <Brain className="w-5 h-5" />
               Ответ агентной системы
             </h3>
-            <div className="prose prose-sm max-w-none text-emerald-800">
+            <div className="prose prose-base max-w-none text-emerald-900 leading-relaxed">
               {results.answer.split('\n').map((line: string, index: number) => (
-                <p key={index} className="mb-2">{line}</p>
+                <p key={index} className="mb-3 text-base">{line}</p>
               ))}
             </div>
           </div>
           
           {results.sources && results.sources.length > 0 && (
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-              <h4 className="font-medium text-slate-900 mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4" />
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
+              <h4 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5" />
                 Источники ({results.sources.length})
               </h4>
-              <div className="space-y-2">
+              <div className="grid gap-4 md:grid-cols-2">
                 {results.sources.map((source: any, index: number) => (
-                  <div key={index} className="bg-white border border-slate-200 rounded p-3">
-                    <div className="text-sm font-medium text-slate-900 mb-1">
-                      {source.doc_id} (релевантность: {(source.score * 100).toFixed(1)}%)
+                  <div key={index} className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                    <div className="text-sm font-semibold text-slate-900 mb-2 flex items-center justify-between">
+                      <span className="truncate">{source.doc_id}</span>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full ml-2">
+                        {(source.score * 100).toFixed(1)}%
+                      </span>
                     </div>
-                    <div className="text-sm text-slate-600">
-                      {source.content?.substring(0, 200)}...
+                    <div className="text-sm text-slate-600 leading-relaxed">
+                      {source.content?.substring(0, 300)}
+                      {source.content?.length > 300 && '...'}
                     </div>
                   </div>
                 ))}
@@ -53,24 +57,26 @@ export default function ResultsSection({ results, loading, activeTab }: ResultsS
     // Обычные результаты поиска
     if (Array.isArray(results)) {
       return (
-        <div className="space-y-3">
-          <h3 className="font-medium text-slate-900 flex items-center gap-2">
-            <FileText className="w-4 h-4" />
+        <div className="space-y-5">
+          <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <FileText className="w-5 h-5" />
             Найденные фрагменты ({results.length})
           </h3>
-          {results.map((result: any, index: number) => (
-            <div key={index} className="bg-white border border-slate-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-900">{result.doc_id}</span>
-                <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                  {(result.score * 100).toFixed(1)}%
-                </span>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {results.map((result: any, index: number) => (
+              <div key={index} className="bg-white border border-slate-200 rounded-lg p-5 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-slate-900 truncate">{result.doc_id}</span>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full ml-2">
+                    {(result.score * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  {result.content || result.text || 'Содержимое недоступно'}
+                </p>
               </div>
-              <p className="text-sm text-slate-600">
-                {result.content || result.text || 'Содержимое недоступно'}
-              </p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )
     }
@@ -226,7 +232,7 @@ export default function ResultsSection({ results, loading, activeTab }: ResultsS
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
       {activeTab === 'search' && renderSearchResults()}
       {activeTab === 'ingest' && renderIngestResults()}
       {activeTab === 'langextract' && renderLangExtractResults()}
