@@ -83,13 +83,13 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
   }
 
   const readFileAsText = async (file: File): Promise<string> => {
-    // Проверяем тип файла
-    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-      return await parsePDF(file)
-    }
+    const filename = file.name.toLowerCase()
     
-    // Для DOCX файлов отправляем на сервер
-    if (file.name.toLowerCase().endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+    // Для PDF и DOCX файлов ВСЕГДА используем серверную обработку
+    if (filename.endsWith('.pdf') || filename.endsWith('.docx') || 
+        file.type === 'application/pdf' || 
+        file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      
       try {
         const formData = new FormData()
         formData.append('file', file)
@@ -101,14 +101,35 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
         
         if (response.ok) {
           const result = await response.json()
-          return result.text || 'Не удалось извлечь текст из документа'
+          const text = result.text || 'Не удалось извлечь текст из документа'
+          
+          // Проверяем качество извлеченного текста
+          if (text.includes('�') || text.length < 10) {
+            console.warn('Extracted text may have encoding issues or be too short')
+          }
+          
+          return text
+        } else {
+          const errorResult = await response.json()
+          throw new Error(errorResult.error || 'Ошибка сервера')
         }
       } catch (error) {
-        console.warn('Server text extraction failed:', error)
+        console.error('Server extraction failed:', error)
+        
+        // Для PDF пробуем клиентскую обработку только как последний резерв
+        if (filename.endsWith('.pdf')) {
+          try {
+            return await parsePDF(file)
+          } catch (pdfError) {
+            throw new Error(`Не удалось обработать PDF файл. Серверная ошибка: ${error}. Клиентская ошибка: ${pdfError}`)
+          }
+        } else {
+          throw error
+        }
       }
     }
     
-    // Для текстовых файлов пробуем разные кодировки
+    // Для текстовых файлов используем клиентскую обработку с автоопределением кодировки
     return await readTextWithEncodingDetection(file)
   }
 
@@ -157,69 +178,67 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
   }
 
   const parsePDF = async (file: File): Promise<string> => {
+    console.warn('Fallback to client-side PDF processing')
+    
     try {
-      // Сначала пробуем серверную обработку
-      const formData = new FormData()
-      formData.append('file', file)
+      const pdfjsLib = await import('pdfjs-dist')
       
-      const response = await fetch('/api/extract-pdf-text', {
-        method: 'POST',
-        body: formData
-      })
-      
-      if (response.ok) {
-        const result = await response.json()
-        return result.text || 'PDF обработан, но текст не найден'
+      // Пробуем разные способы загрузки worker'а
+      try {
+        // Способ 1: CDN worker (самый надежный)
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`
+      } catch (workerError) {
+        try {
+          // Способ 2: Локальный worker
+          pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+            'pdfjs-dist/build/pdf.worker.min.js',
+            import.meta.url
+          ).toString()
+        } catch (localWorkerError) {
+          // Способ 3: Отключаем worker (медленнее, но работает)
+          pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+        }
       }
       
-      // Если сервер недоступен, используем клиентскую обработку
-      throw new Error('Сервер недоступен, пробуем клиентскую обработку')
+      const arrayBuffer = await file.arrayBuffer()
+      const pdf = await pdfjsLib.getDocument({
+        data: arrayBuffer,
+        verbosity: 0,
+        useWorkerFetch: false,
+        isEvalSupported: false,
+        useSystemFonts: true
+      }).promise
+      
+      let fullText = ''
+      const maxPages = Math.min(pdf.numPages, 50) // Ограничиваем количество страниц
+      
+      for (let i = 1; i <= maxPages; i++) {
+        try {
+          const page = await pdf.getPage(i)
+          const textContent = await page.getTextContent()
+          const pageText = textContent.items
+            .filter((item: any) => item.str && item.str.trim())
+            .map((item: any) => item.str)
+            .join(' ')
+          
+          if (pageText.trim()) {
+            fullText += `\n--- Страница ${i} ---\n${pageText.trim()}\n`
+          }
+        } catch (pageError) {
+          console.warn(`Ошибка обработки страницы ${i}:`, pageError)
+          fullText += `\n--- Страница ${i} ---\n[Ошибка извлечения текста]\n`
+        }
+      }
+      
+      if (pdf.numPages > 50) {
+        fullText += `\n\n[Показано первые 50 страниц из ${pdf.numPages}]`
+      }
+      
+      return fullText.trim() || 'PDF файл не содержит извлекаемого текста'
       
     } catch (error) {
-      console.warn('Server PDF processing failed, trying client-side:', error)
-      
-      // Клиентская обработка с локальным worker
-      try {
-        const pdfjsLib = await import('pdfjs-dist')
-        
-        // Используем локальный worker из node_modules
-        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-          'pdfjs-dist/build/pdf.worker.min.js',
-          import.meta.url
-        ).toString()
-        
-        const arrayBuffer = await file.arrayBuffer()
-        const pdf = await pdfjsLib.getDocument({
-          data: arrayBuffer,
-          verbosity: 0 // Отключаем лишние логи
-        }).promise
-        
-        let fullText = ''
-        
-        for (let i = 1; i <= pdf.numPages; i++) {
-          try {
-            const page = await pdf.getPage(i)
-            const textContent = await page.getTextContent()
-            const pageText = textContent.items
-              .filter((item: any) => item.str && item.str.trim())
-              .map((item: any) => item.str)
-              .join(' ')
-            
-            if (pageText.trim()) {
-              fullText += `\n--- Страница ${i} ---\n${pageText.trim()}\n`
-            }
-          } catch (pageError) {
-            console.warn(`Ошибка обработки страницы ${i}:`, pageError)
-            fullText += `\n--- Страница ${i} ---\n[Ошибка извлечения текста]\n`
-          }
-        }
-        
-        return fullText.trim() || 'PDF файл не содержит извлекаемого текста'
-        
-      } catch (clientError) {
-        console.error('Client-side PDF parsing failed:', clientError)
-        throw new Error(`Не удалось обработать PDF файл. Возможно, файл поврежден или защищен паролем. Ошибка: ${clientError}`)
-      }
+      console.error('Client-side PDF parsing failed:', error)
+      throw new Error(`Клиентская обработка PDF не удалась: ${error}. Попробуйте использовать серверную обработку или другой файл.`)
     }
   }
 
@@ -299,10 +318,17 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
                     <div className="text-xs text-slate-500">
                       {(fileItem.file.size / 1024).toFixed(1)} KB
                       {fileItem.status === 'completed' && fileItem.text && (
-                        <span className="ml-2">• {fileItem.text.length} символов</span>
+                        <span className="ml-2">
+                          • {fileItem.text.length} символов
+                          {fileItem.text.includes('�') && (
+                            <span className="text-orange-600 ml-1">⚠️ Возможны проблемы с кодировкой</span>
+                          )}
+                        </span>
                       )}
                       {fileItem.status === 'error' && (
-                        <span className="ml-2 text-red-600">• {fileItem.error}</span>
+                        <div className="mt-1 text-red-600 text-xs">
+                          <div>❌ {fileItem.error}</div>
+                        </div>
                       )}
                     </div>
                   </div>

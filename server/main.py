@@ -462,16 +462,68 @@ async def extract_text(file: UploadFile = File(...)):
                 
                 text = ""
                 for paragraph in doc.paragraphs:
-                    if paragraph.text.strip():
-                        text += paragraph.text + "\n"
+                    if paragraph.text and paragraph.text.strip():
+                        # Обеспечиваем правильную кодировку для русского текста
+                        para_text = paragraph.text.strip()
+                        text += para_text + "\n"
                 
-                return JSONResponse({"text": text.strip() or "DOCX файл не содержит текста"})
+                # Дополнительно извлекаем текст из таблиц
+                for table in doc.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            if cell.text and cell.text.strip():
+                                cell_text = cell.text.strip()
+                                text += cell_text + "\n"
+                
+                # Убеждаемся что текст в правильной кодировке
+                if text.strip():
+                    # Проверяем и исправляем возможные проблемы с кодировкой
+                    try:
+                        # Если текст содержит кракозябры, пробуем исправить
+                        if '�' in text or any(ord(c) > 65535 for c in text):
+                            print("Detected encoding issues in DOCX, attempting to fix...")
+                            # Пробуем перекодировать
+                            text = text.encode('utf-8', errors='ignore').decode('utf-8')
+                    except Exception as encoding_error:
+                        print(f"Encoding fix failed: {encoding_error}")
+                
+                return JSONResponse({
+                    "text": text.strip() or "DOCX файл не содержит текста",
+                    "format": "docx"
+                })
                 
             except ImportError:
-                return JSONResponse({
-                    "error": "Для обработки DOCX требуется установка python-docx"
-                }, status_code=500)
+                # Fallback: пробуем использовать docx2txt если python-docx недоступен
+                try:
+                    import docx2txt
+                    import io
+                    
+                    # Сохраняем во временный файл для docx2txt
+                    import tempfile
+                    import os
+                    
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_file:
+                        tmp_file.write(content)
+                        tmp_file_path = tmp_file.name
+                    
+                    try:
+                        text = docx2txt.process(tmp_file_path)
+                        os.unlink(tmp_file_path)  # Удаляем временный файл
+                        
+                        return JSONResponse({
+                            "text": text.strip() or "DOCX файл не содержит текста",
+                            "format": "docx-fallback"
+                        })
+                    except Exception as docx2txt_error:
+                        os.unlink(tmp_file_path)  # Удаляем временный файл
+                        raise docx2txt_error
+                        
+                except ImportError:
+                    return JSONResponse({
+                        "error": "Для обработки DOCX требуется установка python-docx или docx2txt"
+                    }, status_code=500)
             except Exception as e:
+                print(f"DOCX processing error: {e}")
                 return JSONResponse({"error": f"Ошибка обработки DOCX: {str(e)}"}, status_code=500)
         
         # Текстовые файлы с автоопределением кодировки
