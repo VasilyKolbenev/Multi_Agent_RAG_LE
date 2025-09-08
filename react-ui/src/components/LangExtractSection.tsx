@@ -22,12 +22,15 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
 
     setFile(selectedFile)
     
+    // Показываем индикатор загрузки
+    setText('🔄 Обрабатываем файл...')
+    
     try {
       const fileText = await readFileAsText(selectedFile)
       setText(fileText)
     } catch (error) {
       console.error('Error reading file:', error)
-      alert('Ошибка чтения файла. Попробуйте другой файл.')
+      setText(`❌ Ошибка чтения файла: ${error}.\n\nПопробуйте другой файл или скопируйте текст вручную.`)
     }
   }
 
@@ -55,29 +58,54 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
 
   const parsePDF = async (file: File): Promise<string> => {
     try {
-      // Динамически загружаем PDF.js
-      const pdfjsLib = await import('pdfjs-dist')
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`
+      // Используем более простой подход - отправляем PDF на сервер
+      const formData = new FormData()
+      formData.append('file', file)
       
-      const arrayBuffer = await file.arrayBuffer()
-      const pdf = await pdfjsLib.getDocument(arrayBuffer).promise
+      const response = await fetch('/api/extract-pdf-text', {
+        method: 'POST',
+        body: formData
+      })
       
-      let fullText = ''
-      
-      // Извлекаем текст из всех страниц
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i)
-        const textContent = await page.getTextContent()
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ')
-        fullText += `\n--- Страница ${i} ---\n${pageText}\n`
+      if (!response.ok) {
+        throw new Error('Ошибка при обработке PDF на сервере')
       }
       
-      return fullText.trim()
+      const result = await response.json()
+      return result.text || 'Не удалось извлечь текст из PDF'
+      
     } catch (error) {
       console.error('PDF parsing error:', error)
-      throw new Error(`Ошибка парсинга PDF: ${error}`)
+      
+      // Fallback: попробуем клиентский парсинг
+      try {
+        const pdfjsLib = await import('pdfjs-dist')
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js`
+        
+        const arrayBuffer = await file.arrayBuffer()
+        const pdf = await pdfjsLib.getDocument({
+          data: arrayBuffer,
+          cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/cmaps/',
+          cMapPacked: true
+        }).promise
+        
+        let fullText = ''
+        
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const textContent = await page.getTextContent()
+          const pageText = textContent.items
+            .map((item: any) => item.str)
+            .join(' ')
+          fullText += `\n--- Страница ${i} ---\n${pageText}\n`
+        }
+        
+        return fullText.trim() || 'PDF файл не содержит текста или текст не удалось извлечь'
+        
+      } catch (fallbackError) {
+        console.error('Fallback PDF parsing failed:', fallbackError)
+        return `Ошибка парсинга PDF: ${fallbackError}. Попробуйте другой файл или скопируйте текст вручную.`
+      }
     }
   }
 

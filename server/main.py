@@ -9,13 +9,13 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from .retrieval import HybridCorpus
-from .graph_index import GraphIndex
-from .agents import MultiAgent
-from .agentic_rag import AgenticRAGSystem
-from .storage import append_trace, read_traces
-from .langx import run_extraction, stream_extraction
-from .profiles import PROFILES
+from retrieval import HybridCorpus
+from graph_index import GraphIndex
+from agents import MultiAgent
+from agentic_rag import AgenticRAGSystem
+from storage import append_trace, read_traces
+from langx import run_extraction, stream_extraction
+from profiles import PROFILES
 
 app = FastAPI(title="MultiAgent-RAG Pro")
 
@@ -368,3 +368,58 @@ async def get_viz(job_id: str):
     fp = os.path.join("data","extracts",job_id,"viz.html")
     if not os.path.exists(fp): return JSONResponse({"error":"not found"}, status_code=404)
     return FileResponse(fp, media_type="text/html")
+
+@app.post("/api/extract-pdf-text")
+async def extract_pdf_text(file: UploadFile = File(...)):
+    """Извлечение текста из PDF файла"""
+    try:
+        if not file.filename.lower().endswith('.pdf'):
+            return JSONResponse({"error": "Поддерживаются только PDF файлы"}, status_code=400)
+        
+        # Читаем содержимое файла
+        content = await file.read()
+        
+        # Используем pypdf для извлечения текста
+        try:
+            from pypdf import PdfReader
+            import io
+            
+            pdf_file = io.BytesIO(content)
+            pdf_reader = PdfReader(pdf_file)
+            
+            text = ""
+            for page_num, page in enumerate(pdf_reader.pages, 1):
+                page_text = page.extract_text()
+                if page_text.strip():
+                    text += f"\n--- Страница {page_num} ---\n{page_text}\n"
+            
+            if not text.strip():
+                return JSONResponse({"error": "PDF файл не содержит текста или текст зашифрован"}, status_code=400)
+            
+            return JSONResponse({"text": text.strip()})
+            
+        except ImportError:
+            # Fallback: используем pdfplumber если PyPDF2 недоступен
+            try:
+                import pdfplumber
+                
+                text = ""
+                with pdfplumber.open(io.BytesIO(content)) as pdf:
+                    for page_num, page in enumerate(pdf.pages, 1):
+                        page_text = page.extract_text()
+                        if page_text:
+                            text += f"\n--- Страница {page_num} ---\n{page_text}\n"
+                
+                if not text.strip():
+                    return JSONResponse({"error": "PDF файл не содержит текста"}, status_code=400)
+                
+                return JSONResponse({"text": text.strip()})
+                
+            except ImportError:
+                return JSONResponse({
+                    "error": "Для обработки PDF требуется установка PyPDF2 или pdfplumber. Скопируйте текст вручную."
+                }, status_code=500)
+        
+    except Exception as e:
+        print(f"Ошибка обработки PDF: {e}")
+        return JSONResponse({"error": f"Ошибка обработки PDF: {str(e)}"}, status_code=500)
