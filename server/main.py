@@ -454,9 +454,10 @@ async def extract_text(file: UploadFile = File(...)):
         # DOCX файлы
         elif filename.endswith('.docx'):
             try:
-                from docx import Document
                 import io
+                from docx import Document
                 
+                print(f"Processing DOCX file: {filename}, size: {len(content)} bytes")
                 doc_file = io.BytesIO(content)
                 doc = Document(doc_file)
                 
@@ -523,8 +524,14 @@ async def extract_text(file: UploadFile = File(...)):
                         "error": "Для обработки DOCX требуется установка python-docx или docx2txt"
                     }, status_code=500)
             except Exception as e:
+                import traceback
+                error_details = traceback.format_exc()
                 print(f"DOCX processing error: {e}")
-                return JSONResponse({"error": f"Ошибка обработки DOCX: {str(e)}"}, status_code=500)
+                print(f"Full traceback: {error_details}")
+                return JSONResponse({
+                    "error": f"Ошибка обработки DOCX: {str(e)}",
+                    "details": str(e)
+                }, status_code=500)
         
         # Текстовые файлы с автоопределением кодировки
         elif filename.endswith(('.txt', '.md', '.rtf', '.csv')):
@@ -583,5 +590,12 @@ async def extract_text(file: UploadFile = File(...)):
             }, status_code=400)
         
     except Exception as e:
-        print(f"Ошибка извлечения текста: {e}")
-        return JSONResponse({"error": f"Ошибка извлечения текста: {str(e)}"}, status_code=500)
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Общая ошибка извлечения текста: {e}")
+        print(f"Full traceback: {error_details}")
+        return JSONResponse({
+            "error": f"Ошибка извлечения текста: {str(e)}",
+            "type": "general_error",
+            "filename": filename
+        }, status_code=500)

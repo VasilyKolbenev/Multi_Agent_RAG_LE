@@ -100,6 +100,13 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
         })
         
         if (response.ok) {
+          const contentType = response.headers.get('content-type')
+          if (!contentType || !contentType.includes('application/json')) {
+            const textResponse = await response.text()
+            console.error('Server returned non-JSON response:', textResponse.substring(0, 200))
+            throw new Error('Сервер вернул некорректный ответ (не JSON). Возможно, ошибка на сервере.')
+          }
+          
           const result = await response.json()
           const text = result.text || 'Не удалось извлечь текст из документа'
           
@@ -110,8 +117,22 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
           
           return text
         } else {
-          const errorResult = await response.json()
-          throw new Error(errorResult.error || 'Ошибка сервера')
+          let errorMessage = 'Ошибка сервера'
+          try {
+            const contentType = response.headers.get('content-type')
+            if (contentType && contentType.includes('application/json')) {
+              const errorResult = await response.json()
+              errorMessage = errorResult.error || `Ошибка сервера (${response.status})`
+            } else {
+              const textResponse = await response.text()
+              console.error('Server error response:', textResponse.substring(0, 200))
+              errorMessage = `Ошибка сервера (${response.status}): ${response.statusText}`
+            }
+          } catch (parseError) {
+            console.error('Failed to parse error response:', parseError)
+            errorMessage = `Ошибка сервера (${response.status}): ${response.statusText}`
+          }
+          throw new Error(errorMessage)
         }
       } catch (error) {
         console.error('Server extraction failed:', error)
@@ -183,10 +204,10 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
     try {
       const pdfjsLib = await import('pdfjs-dist')
       
-      // Пробуем разные способы загрузки worker'а
+      // Используем совместимую версию worker'а
       try {
-        // Способ 1: CDN worker (самый надежный)
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`
+        // Способ 1: Используем ту же версию что и библиотека
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js`
       } catch (workerError) {
         try {
           // Способ 2: Локальный worker
@@ -196,6 +217,7 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
           ).toString()
         } catch (localWorkerError) {
           // Способ 3: Отключаем worker (медленнее, но работает)
+          console.warn('Using PDF.js without worker')
           pdfjsLib.GlobalWorkerOptions.workerSrc = ''
         }
       }
