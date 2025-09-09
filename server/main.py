@@ -9,14 +9,14 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from .retrieval import HybridCorpus, Document, EmbeddedDocument, update_document_in_corpus, get_corpus_stats, clear_corpus
-from .agents import MultiAgent
-from .llm import LLM
-from .graph_index import GraphIndex
-from .agentic_rag import AgenticRAGSystem
-from .storage import append_trace, read_traces
-from .langx import run_extraction, stream_extraction
-from .profiles import PROFILES
+from server.retrieval import HybridCorpus, Document, EmbeddedDocument, update_document_in_corpus, get_corpus_stats, clear_corpus
+from server.agents import MultiAgent
+from server.llm import LLM
+from server.graph_index import GraphIndex
+from server.agentic_rag import AgenticRAGSystem
+from server.storage import append_trace, read_traces
+from server.langx import run_extraction, stream_extraction
+from server.profiles import PROFILES
 
 app = FastAPI(title="MultiAgent-RAG Pro")
 
