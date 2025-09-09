@@ -205,16 +205,14 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
       const pdfjsLib = await import('pdfjs-dist')
       
       // Используем совместимую версию worker'а
-      // Способ 1: Локальный worker в /assets/
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '/Multi_Agent_RAG_LE/assets/pdf.worker.min.js'
+      // Способ 1: Локальный worker, обработанный Vite
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.js',
+        import.meta.url
+      ).toString()
       
-      // Fallback на CDN, если локальный недоступен (маловероятно после копирования)
-      // try {
-      //   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-      //     'pdfjs-dist/build/pdf.worker.min.js',
-      //     import.meta.url
-      //   ).toString()
-      // } catch (localWorkerError) {
+      // Fallback на CDN, если локальный недоступен (маловероятно после правильной настройки)
+      // if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
       //   console.warn('Local PDF.js worker failed, trying CDN')
       //   pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js`
       // }

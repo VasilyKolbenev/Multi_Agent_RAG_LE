@@ -462,13 +462,24 @@ async def extract_text(file: UploadFile = File(...)):
                 return JSONResponse({"text": text.strip() or "DOCX файл не содержит текста"})
             except Exception as docx2txt_error:
                 print(f"docx2txt processing failed: {docx2txt_error}")
+                
                 # Fallback to python-docx if docx2txt fails
                 try:
                     from docx import Document
+                    import chardet
                     
                     print(f"Processing DOCX file with python-docx: {filename}, size: {len(content)} bytes")
                     doc_file = io.BytesIO(content)
-                    doc = Document(doc_file)
+                    
+                    # Определяем кодировку перед открытием с Document
+                    detected = chardet.detect(content)
+                    encoding = detected.get('encoding', 'utf-8')
+                    confidence = detected.get('confidence', 0)
+                    print(f"Detected encoding for DOCX content: {encoding} (confidence: {confidence})")
+
+                    # Попытка декодировать контент с найденной кодировкой или UTF-8
+                    decoded_content = content.decode(encoding, errors='replace')
+                    doc = Document(io.BytesIO(decoded_content.encode('utf-8')))
                     
                     text = ""
                     for paragraph in doc.paragraphs:
@@ -483,17 +494,10 @@ async def extract_text(file: UploadFile = File(...)):
                                     cell_text = cell.text.strip()
                                     text += cell_text + "\n"
                     
-                    if text.strip():
-                        try:
-                            if '' in text or any(ord(c) > 65535 for c in text):
-                                print("Detected encoding issues in DOCX, attempting to fix...")
-                                text = content.decode('utf-8', errors='ignore').decode('utf-8')
-                        except Exception as encoding_error:
-                            print(f"Encoding fix failed: {encoding_error}")
-                    
                     return JSONResponse({
                         "text": text.strip() or "DOCX файл не содержит текста",
-                        "format": "docx"
+                        "format": "docx",
+                        "encoding_detected": encoding
                     })
                     
                 except ImportError:
