@@ -205,22 +205,25 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
       const pdfjsLib = await import('pdfjs-dist')
       
       // Используем совместимую версию worker'а
-      try {
-        // Способ 1: Используем ту же версию что и библиотека
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js`
-      } catch (workerError) {
-        try {
-          // Способ 2: Локальный worker
-          pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-            'pdfjs-dist/build/pdf.worker.min.js',
-            import.meta.url
-          ).toString()
-        } catch (localWorkerError) {
-          // Способ 3: Отключаем worker (медленнее, но работает)
-          console.warn('Using PDF.js without worker')
-          pdfjsLib.GlobalWorkerOptions.workerSrc = ''
-        }
-      }
+      // Способ 1: Локальный worker в /assets/
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/Multi_Agent_RAG_LE/assets/pdf.worker.min.js'
+      
+      // Fallback на CDN, если локальный недоступен (маловероятно после копирования)
+      // try {
+      //   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+      //     'pdfjs-dist/build/pdf.worker.min.js',
+      //     import.meta.url
+      //   ).toString()
+      // } catch (localWorkerError) {
+      //   console.warn('Local PDF.js worker failed, trying CDN')
+      //   pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js`
+      // }
+      
+      // Если все выше не сработало, отключаем worker (медленнее, но работает)
+      // if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      //   console.warn('Using PDF.js without worker as fallback')
+      //   pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+      // }
       
       const arrayBuffer = await file.arrayBuffer()
       const pdf = await pdfjsLib.getDocument({
