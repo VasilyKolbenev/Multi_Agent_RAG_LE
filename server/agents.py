@@ -1,8 +1,8 @@
 from typing import Dict, Any, List, Set, Optional
-from .llm import LLM
-from .retrieval import HybridCorpus
-from .graph_index import GraphIndex
-from .langx import run_extraction
+from llm import LLM
+from retrieval import HybridCorpus
+from graph_index import GraphIndex
+from langx import run_extraction
 import re
 
 SYSTEM_PLANNER = (
