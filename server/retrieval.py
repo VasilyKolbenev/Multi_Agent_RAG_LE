@@ -4,7 +4,7 @@ from typing import List, Tuple, Optional, Set, Dict, Any
 from rank_bm25 import BM25Okapi
 import faiss
 from openai import OpenAI
-from . import config # Импортируем наш новый конфиг
+import config # Импортируем наш новый конфиг
 
 # --- Константы и Клиенты ---
 DATA_DIR = os.environ.get("DATA_DIR", "data")
