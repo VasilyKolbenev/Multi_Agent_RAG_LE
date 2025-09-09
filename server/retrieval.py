@@ -6,6 +6,38 @@ import faiss
 from openai import OpenAI
 from . import config # Импортируем наш новый конфиг
 
+from dataclasses import dataclass
+
+@dataclass
+class Document:
+    id: str
+    text: str
+    metadata: Optional[Dict[str, Any]] = None
+
+@dataclass
+class EmbeddedDocument(Document):
+    embedding: List[float]
+
+
+def update_document_in_corpus(corpus: Any, doc_id: str, new_text: str):
+    """Заглушка для обновления документа в корпусе."""
+    print(f"Stub: Updating document {doc_id} with new text (length: {len(new_text)})")
+    # Здесь должна быть реальная логика обновления
+
+def get_corpus_stats(corpus: Any) -> Dict[str, Any]:
+    """Заглушка для получения статистики корпуса."""
+    return {"total_documents": len(corpus.list_docs()), "total_chunks": len(corpus.chunks)}
+
+def clear_corpus(corpus: Any):
+    """Заглушка для очистки корпуса."""
+    print("Stub: Clearing corpus")
+    corpus.docs = {}
+    corpus.chunks = {}
+    corpus.index = None
+    corpus.bm25 = None
+    corpus._save() # Сохраняем пустое состояние
+
+
 # --- Константы и Клиенты ---
 DATA_DIR = os.environ.get("DATA_DIR", "data")
 FAISS_INDEX_PATH = os.path.join(DATA_DIR, "faiss.index")
