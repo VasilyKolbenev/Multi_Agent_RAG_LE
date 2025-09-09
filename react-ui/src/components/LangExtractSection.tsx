@@ -171,7 +171,7 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
           console.log(`Successfully read file with encoding: ${encoding}`)
           return text
         }
-      } catch (error) {
+    } catch (error) {
         console.warn(`Failed to read with encoding ${encoding}:`, error)
         continue
       }
@@ -236,12 +236,12 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
       
       for (let i = 1; i <= maxPages; i++) {
         try {
-          const page = await pdf.getPage(i)
-          const textContent = await page.getTextContent()
-          const pageText = textContent.items
+        const page = await pdf.getPage(i)
+        const textContent = await page.getTextContent()
+        const pageText = textContent.items
             .filter((item: any) => item.str && item.str.trim())
-            .map((item: any) => item.str)
-            .join(' ')
+          .map((item: any) => item.str)
+          .join(' ')
           
           if (pageText.trim()) {
             fullText += `\n--- Страница ${i} ---\n${pageText.trim()}\n`
@@ -268,9 +268,9 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
-          <Brain className="w-5 h-5" />
+        <Brain className="w-5 h-5" />
           Извлечение сущностей из документов
-        </h2>
+      </h2>
         <div className="bg-violet-100 text-violet-800 text-xs font-medium px-2.5 py-0.5 rounded">
           Шаг 2
         </div>
@@ -291,10 +291,10 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
           <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-violet-400 transition-colors">
             <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
             <div className="mb-4">
-              <input
-                type="file"
+            <input
+              type="file"
                 multiple
-                accept=".txt,.md,.pdf,.doc,.docx,.rtf,.csv,.json,.xml,.html"
+              accept=".txt,.md,.pdf,.doc,.docx,.rtf,.csv,.json,.xml,.html"
                 onChange={handleFilesUpload}
                 className="hidden"
                 id="file-upload"
@@ -345,16 +345,16 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
                           {fileItem.text.includes('�') && (
                             <span className="text-orange-600 ml-1">⚠️ Возможны проблемы с кодировкой</span>
                           )}
-                        </span>
-                      )}
+              </span>
+            )}
                       {fileItem.status === 'error' && (
                         <div className="mt-1 text-red-600 text-xs">
                           <div>❌ {fileItem.error}</div>
                         </div>
                       )}
-                    </div>
-                  </div>
-                  
+          </div>
+        </div>
+
                   <button
                     onClick={() => removeFile(fileItem.file)}
                     className="flex-shrink-0 text-slate-400 hover:text-red-500 transition-colors"
@@ -369,7 +369,7 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
 
         {/* Combined Text Preview */}
         {combinedText && (
-          <div>
+        <div>
             <h3 className="text-sm font-medium text-slate-700 mb-3">
               Объединенный текст для анализа
             </h3>
@@ -382,7 +382,7 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
             <div className="text-xs text-slate-500 mt-2">
               Всего символов: {combinedText.length}
             </div>
-          </div>
+        </div>
         )}
 
         {/* Custom Prompt */}

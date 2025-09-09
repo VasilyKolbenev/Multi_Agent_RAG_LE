@@ -1,6 +1,6 @@
 import os, json, httpx
 import asyncio
-import config
+from . import config
 
 class LLM:
     def __init__(self, model=None, provider=None, key=None):
