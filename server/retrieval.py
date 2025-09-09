@@ -8,7 +8,7 @@ from . import config # Импортируем наш новый конфиг
 
 from dataclasses import dataclass
 
-@dataclass
+@dataclass(kw_only=True)
 class Document:
     id: str
     text: str
