@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: multiagent-rag-api
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server/render_start.py
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: LLM_MODEL
+        value: gpt-5-mini
+      - key: EMBEDDING_MODEL
+        value: text-embedding-3-small
+    # Environment variables that need to be set in Render dashboard:
+    # OPENAI_API_KEY - your OpenAI API key

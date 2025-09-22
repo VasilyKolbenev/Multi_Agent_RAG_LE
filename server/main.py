@@ -23,7 +23,12 @@ app = FastAPI(title="MultiAgent-RAG Pro")
 # Настройка CORS для конкретных доменов
 origins = [
     "https://vasilykolbenev.github.io",  # Ваш GitHub Pages
+    "https://vasilykolbenev.github.io/Multi_Agent_RAG_LE",  # Полный путь GitHub Pages
+    "https://multiagent-rag-api.vercel.app",  # Vercel deployment
+    "https://*.vercel.app",            # Все Vercel поддомены
     "http://localhost:8001",           # Локальный сервер для тестов
+    "http://localhost:3000",           # React dev server
+    "http://localhost:5173",           # Vite dev server
     "http://localhost",                # На всякий случай
     "null",                            # Для локальных файлов (file://)
 ]
@@ -113,27 +118,30 @@ async def ingest_unified(files: List[UploadFile] = File(None), text: str = Form(
             with open(fp, "wb") as out: 
                 out.write(await f.read())
             results.append({"type": "file", "filename": f.filename})
-        
-        # Загружаем каждый файл отдельно через ingest_text
+
+        # Загружаем каждый файл отдельно через ingest_text ТОЛЬКО если это текстовый файл
         for f in files:
-            try:
-                filepath = os.path.join(base, f.filename)
-                with open(filepath, 'r', encoding='utf-8') as file_content:
-                    content = file_content.read()
-                    doc_id = f"file_{f.filename}_{uuid.uuid4().hex[:8]}"
-                    corpus.ingest_text(doc_id, content)
-            except Exception as e:
-                print(f"Error loading file {f.filename}: {e}")
-                # Пробуем другие кодировки для файлов
+            filename_lower = f.filename.lower()
+            if filename_lower.endswith(('.txt', '.md', '.rtf', '.csv', '.json', '.xml', '.html')):
                 try:
-                    with open(filepath, 'r', encoding='cp1251') as file_content:
+                    filepath = os.path.join(base, f.filename)
+                    with open(filepath, 'r', encoding='utf-8') as file_content:
                         content = file_content.read()
                         doc_id = f"file_{f.filename}_{uuid.uuid4().hex[:8]}"
                         corpus.ingest_text(doc_id, content)
-                except Exception as e2:
-                    print(f"Error loading file {f.filename} with cp1251: {e2}")
-                    continue
-    
+                except Exception as e:
+                    print(f"Error loading file {f.filename}: {e}")
+                    try:
+                        with open(filepath, 'r', encoding='cp1251') as file_content:
+                            content = file_content.read()
+                            doc_id = f"file_{f.filename}_{uuid.uuid4().hex[:8]}"
+                            corpus.ingest_text(doc_id, content)
+                    except Exception as e2:
+                        print(f"Error loading file {f.filename} with cp1251: {e2}")
+                        continue
+            else:
+                print(f"Skipping direct text ingestion for binary file: {f.filename}. Will be processed by /api/extract-text.")
+
     # Обрабатываем текст, если он есть
     if text and text.strip():
         if not doc_id:
