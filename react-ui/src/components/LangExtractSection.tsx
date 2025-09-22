@@ -211,17 +211,8 @@ export default function LangExtractSection({ onExtract, loading }: LangExtractSe
         import.meta.url
       ).toString()
       
-      // Fallback на CDN, если локальный недоступен (маловероятно после правильной настройки)
-      // if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-      //   console.warn('Local PDF.js worker failed, trying CDN')
-      //   pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js`
-      // }
-      
-      // Если все выше не сработало, отключаем worker (медленнее, но работает)
-      // if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-      //   console.warn('Using PDF.js without worker as fallback')
-      //   pdfjsLib.GlobalWorkerOptions.workerSrc = ''
-      // }
+      // Оставляем только эту строку для загрузки worker'а, так как Vite должен его обработать
+      // Остальные fallback-и удаляем для чистоты и ясности.
       
       const arrayBuffer = await file.arrayBuffer()
       const pdf = await pdfjsLib.getDocument({
