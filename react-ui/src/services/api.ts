@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://multiagent-rag-api.onrender.com'
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://multiagent-rag-api.vercel.app'
 
 export class ApiService {
   static async health() {
