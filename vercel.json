@@ -2,23 +2,18 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/main.py",
+      "src": "index.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/api/main.py"
+      "dest": "/index.py"
     }
   ],
   "env": {
     "LLM_MODEL": "gpt-5-mini",
     "EMBEDDING_MODEL": "text-embedding-3-small"
-  },
-  "functions": {
-    "api/main.py": {
-      "maxDuration": 30
-    }
   }
 }
