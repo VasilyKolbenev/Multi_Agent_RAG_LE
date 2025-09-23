@@ -1,4 +1,5 @@
 import os, uuid, json
+import httpx
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -257,6 +258,29 @@ async def ask_agentic_stream(q: str, max_iterations: int = 5):
             "X-Accel-Buffering": "no"
         }
     )
+
+# --- Debug endpoint to verify OpenAI credentials from container ---
+@app.get("/debug/openai")
+def debug_openai():
+    try:
+        headers = {
+            "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY','').strip()}",
+            "Content-Type": "application/json"
+        }
+        if os.getenv("OPENAI_PROJECT"):
+            headers["OpenAI-Project"] = os.getenv("OPENAI_PROJECT")
+        if os.getenv("OPENAI_ORG") or os.getenv("OPENAI_ORGANIZATION"):
+            headers["OpenAI-Organization"] = os.getenv("OPENAI_ORG") or os.getenv("OPENAI_ORGANIZATION")
+        with httpx.Client(timeout=10) as client:
+            r = client.get("https://api.openai.com/v1/models", headers=headers)
+            out = {
+                "status": r.status_code,
+                "ok": r.status_code == 200,
+                "body": r.json() if r.headers.get("content-type","" ).startswith("application/json") else r.text[:400]
+            }
+            return JSONResponse(out, status_code=r.status_code)
+    except Exception as e:
+        return JSONResponse({"status": 500, "error": str(e)}, status_code=500)
 
 @app.get("/documents")
 def get_documents():
