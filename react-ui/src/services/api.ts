@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://multiagent-rag-api.vercel.app'
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://multi-agent-rag-le-git-main-vasilys-projects-d04563ed.vercel.app'
 
 export class ApiService {
   static async health() {
