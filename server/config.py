@@ -18,7 +18,8 @@ else:
 
 # Загружаем ключ OpenAI и сразу проверяем его наличие
 # Сначала пробуем системные переменные (Railway UI Variables)
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("API _KEY") or os.getenv("API_KEY")
+# Подтягиваем ключ и убираем случайные пробелы/переносы строк/кавычки
+OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or os.getenv("API _KEY") or os.getenv("API_KEY") or "").strip().strip('"').strip("'")
 
 # Если не нашли, показываем подробную диагностику
 if not OPENAI_API_KEY:
@@ -42,11 +43,13 @@ if not OPENAI_API_KEY:
 
 # Печатаем маскированное значение для проверки в логах
 print(f"   - OPENAI_API_KEY: Loaded (sk-proj-...{OPENAI_API_KEY[-4:]})")
+if not OPENAI_API_KEY.startswith("sk-"):
+    print("⚠️  OPENAI_API_KEY doesn't start with 'sk-'. Check for extra characters or wrong key type.")
 
 # Остальные настройки
-# ПРИНУДИТЕЛЬНО используем стабильную модель (Railway может иметь gpt-5-mini в Variables)
-LLM_MODEL = "gpt-5-mini"  # Новая модель GPT-5 mini
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+# Читаем модель из переменных окружения, по умолчанию gpt-5-mini
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-5-mini").strip()
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small").strip()
 LX_MODEL_ID = os.getenv("LX_MODEL_ID", "gpt-4o-mini")  # Используем поддерживаемую LangExtract модель
 
 print(f"   - LLM_MODEL: {LLM_MODEL}")
