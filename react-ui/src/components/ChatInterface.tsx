@@ -117,7 +117,7 @@ export default function ChatInterface({ onDocumentsChange }: ChatInterfaceProps)
             <Sparkles className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h2 className="font-semibold text-slate-900">НейроЭксперт</h2>
+            <h2 className="font-semibold text-slate-900">ДИТ ИИ‑эксперт</h2>
             <p className="text-sm text-slate-500">Интеллектуальный помощник по документам</p>
           </div>
         </div>

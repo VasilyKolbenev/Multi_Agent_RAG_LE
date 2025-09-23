@@ -68,7 +68,7 @@ function App() {
               <span className="text-white font-bold text-sm">AI</span>
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-slate-900">НейроЭксперт</h1>
+              <h1 className="text-lg font-semibold text-slate-900">ДИТ ИИ‑эксперт</h1>
               <p className="text-xs text-slate-500">Интеллектуальная работа с документами</p>
             </div>
           </div>

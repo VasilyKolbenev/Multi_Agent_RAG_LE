@@ -90,4 +90,15 @@ export class ApiService {
     if (!response.ok) throw new Error('Failed to get entity analytics')
     return response.json()
   }
+
+  static async extractText(file: File) {
+    const form = new FormData()
+    form.append('file', file)
+    const response = await fetch(`${API_BASE}/api/extract-text`, {
+      method: 'POST',
+      body: form
+    })
+    if (!response.ok) throw new Error('Extract text failed')
+    return response.json() as Promise<{ text?: string; error?: string }>
+  }
 }

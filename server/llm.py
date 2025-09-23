@@ -42,6 +42,10 @@ class LLM:
             payload["max_tokens"] = 2000
         async with httpx.AsyncClient(timeout=30) as client:  # Уменьшаем таймаут до 30 сек
             r = await client.post(url, headers=headers, json=payload)
+            # Если ключ невалиден или отсутствует — мягкий фолбэк в stub
+            if r.status_code == 401:
+                print("[LLM] 401 Unauthorized from OpenAI. Falling back to stub provider.")
+                return self._stub(system, user)
             r.raise_for_status()
             data = r.json()
             return data["choices"][0]["message"]["content"].strip()
@@ -61,6 +65,10 @@ class LLM:
 
         async with httpx.AsyncClient(timeout=30) as client:  # Уменьшаем таймаут до 30 сек
             async with client.stream("POST", url, headers=headers, json=payload) as response:
+                if response.status_code == 401:
+                    # В потоковом режиме вернём stub единым куском
+                    yield self._stub(system, user)
+                    return
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if line.startswith("data:"):
