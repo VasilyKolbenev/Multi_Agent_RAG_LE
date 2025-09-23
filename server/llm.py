@@ -31,6 +31,13 @@ class LLM:
     async def _openai(self, system: str, user: str) -> str:
         url = "https://api.openai.com/v1/chat/completions"
         headers = {"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"}
+        # Поддержка проектных/организационных ключей
+        openai_project = os.getenv("OPENAI_PROJECT")
+        openai_org = os.getenv("OPENAI_ORG") or os.getenv("OPENAI_ORGANIZATION")
+        if openai_project:
+            headers["OpenAI-Project"] = openai_project
+        if openai_org:
+            headers["OpenAI-Organization"] = openai_org
         payload = {
             "model": self.model,
             "messages": [{"role":"system","content":system},{"role":"user","content":user}]
@@ -54,6 +61,12 @@ class LLM:
         """Асинхронный генератор для потоковой передачи от OpenAI."""
         url = "https://api.openai.com/v1/chat/completions"
         headers = {"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"}
+        openai_project = os.getenv("OPENAI_PROJECT")
+        openai_org = os.getenv("OPENAI_ORG") or os.getenv("OPENAI_ORGANIZATION")
+        if openai_project:
+            headers["OpenAI-Project"] = openai_project
+        if openai_org:
+            headers["OpenAI-Organization"] = openai_org
         payload = {
             "model": self.model,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],

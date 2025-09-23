@@ -24,6 +24,9 @@ def _examples_default():
     )]
 
 def run_extraction(text_or_url: str, prompt: Optional[str]=None, examples: Optional[List[Dict[str, Any]]]=None) -> Dict[str, Any]:
+    if lx is None:
+        # LangExtract не установлен — тихо возвращаем пустой результат
+        return {"job_id": "disabled", "items": []}
     prompt = prompt or DEFAULT_PROMPT
     ex = _examples_default()
     if examples:
