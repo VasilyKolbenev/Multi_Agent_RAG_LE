@@ -29,7 +29,8 @@ class LLM:
                 await asyncio.sleep(0.05)
 
     async def _openai(self, system: str, user: str) -> str:
-        url = "https://api.openai.com/v1/chat/completions"
+        is_gpt5 = self.model.startswith("gpt-5")
+        url = "https://api.openai.com/v1/responses" if is_gpt5 else "https://api.openai.com/v1/chat/completions"
         headers = {"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"}
         # Поддержка проектных/организационных ключей
         openai_project = os.getenv("OPENAI_PROJECT")
@@ -38,28 +39,57 @@ class LLM:
             headers["OpenAI-Project"] = openai_project
         if openai_org:
             headers["OpenAI-Organization"] = openai_org
-        payload = {
-            "model": self.model,
-            "messages": [{"role":"system","content":system},{"role":"user","content":user}]
-        }
-        
-        # Для модели gpt-5-mini используем только базовые параметры (temperature и max_tokens не поддерживаются)
-        if not self.model.startswith("gpt-5"):
-            payload["temperature"] = 0.2
-            payload["max_tokens"] = 2000
+        if is_gpt5:
+            # responses API
+            payload = {
+                "model": self.model,
+                "input": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user}
+                ]
+            }
+        else:
+            payload = {
+                "model": self.model,
+                "messages": [{"role":"system","content":system},{"role":"user","content":user}],
+                "temperature": 0.2,
+                "max_tokens": 2000
+            }
         async with httpx.AsyncClient(timeout=30) as client:  # Уменьшаем таймаут до 30 сек
             r = await client.post(url, headers=headers, json=payload)
             # Если ключ невалиден или отсутствует — мягкий фолбэк в stub
             if r.status_code == 401:
                 print("[LLM] 401 Unauthorized from OpenAI. Falling back to stub provider.")
+                try:
+                    print("[LLM] Response:", r.text[:400])
+                except Exception:
+                    pass
                 return self._stub(system, user)
             r.raise_for_status()
             data = r.json()
-            return data["choices"][0]["message"]["content"].strip()
+            if is_gpt5:
+                # responses API может вернуть удобное поле output_text
+                if "output_text" in data and data["output_text"]:
+                    return data["output_text"].strip()
+                # универсальный разбор
+                try:
+                    parts = data.get("output", data.get("outputs", []))
+                    if parts:
+                        content = parts[0].get("content", [])
+                        if content and isinstance(content, list):
+                            txt = "".join([c.get("text", "") for c in content])
+                            if txt:
+                                return txt.strip()
+                except Exception:
+                    pass
+                return ""
+            else:
+                return data["choices"][0]["message"]["content"].strip()
 
     async def _openai_stream(self, system: str, user: str):
         """Асинхронный генератор для потоковой передачи от OpenAI."""
-        url = "https://api.openai.com/v1/chat/completions"
+        is_gpt5 = self.model.startswith("gpt-5")
+        url = "https://api.openai.com/v1/responses" if is_gpt5 else "https://api.openai.com/v1/chat/completions"
         headers = {"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"}
         openai_project = os.getenv("OPENAI_PROJECT")
         openai_org = os.getenv("OPENAI_ORG") or os.getenv("OPENAI_ORGANIZATION")
@@ -67,14 +97,23 @@ class LLM:
             headers["OpenAI-Project"] = openai_project
         if openai_org:
             headers["OpenAI-Organization"] = openai_org
-        payload = {
-            "model": self.model,
-            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            "stream": True,
-        }
-        if not self.model.startswith("gpt-5"):
-            payload["temperature"] = 0.2
-            payload["max_tokens"] = 2000
+        if is_gpt5:
+            payload = {
+                "model": self.model,
+                "input": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user}
+                ],
+                "stream": True
+            }
+        else:
+            payload = {
+                "model": self.model,
+                "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+                "temperature": 0.2,
+                "max_tokens": 2000,
+                "stream": True,
+            }
 
         async with httpx.AsyncClient(timeout=30) as client:  # Уменьшаем таймаут до 30 сек
             async with client.stream("POST", url, headers=headers, json=payload) as response:
@@ -90,11 +129,20 @@ class LLM:
                             break
                         try:
                             data = json.loads(data_str)
-                            if "choices" in data and len(data["choices"]) > 0:
-                                delta = data["choices"][0].get("delta", {})
-                                content = delta.get("content")
-                                if content:
-                                    yield content
+                            if is_gpt5:
+                                # responses stream
+                                txt = (
+                                    data.get("output_text")
+                                    or ("".join([c.get("text", "") for c in (data.get("output", {}) or {}).get("content", [])]))
+                                )
+                                if txt:
+                                    yield txt
+                            else:
+                                if "choices" in data and len(data["choices"]) > 0:
+                                    delta = data["choices"][0].get("delta", {})
+                                    content = delta.get("content")
+                                    if content:
+                                        yield content
                         except json.JSONDecodeError:
                             print(f"Failed to decode JSON: {data_str}")
                             continue
