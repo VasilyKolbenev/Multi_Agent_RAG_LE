@@ -1,19 +1,13 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "main.py",
-      "use": "@vercel/python"
+  "functions": {
+    "app.py": {
+      "runtime": "@vercel/python"
     }
-  ],
+  },
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/main.py"
+      "dest": "/app.py"
     }
-  ],
-  "env": {
-    "LLM_MODEL": "gpt-5-mini",
-    "EMBEDDING_MODEL": "text-embedding-3-small"
-  }
+  ]
 }
