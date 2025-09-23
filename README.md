@@ -83,3 +83,4 @@ docker run -p 8000:8000 \
 Папка `docs/` готова к публикации. Открой:
 https://<user>.github.io/<repo>/?api=https://<ваш-бэкенд-URL>
 "# Force Vercel redeploy $(date)" 
+"# Update $(date)" 
