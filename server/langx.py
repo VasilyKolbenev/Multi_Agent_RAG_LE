@@ -1,7 +1,12 @@
 import os, uuid, json, textwrap, time
 from typing import Any, Dict, List, Optional, Generator
 
-import langextract as lx
+# Делаем langextract опциональным, чтобы деплой на Railway не падал при отсутствии пакета
+try:
+    import langextract as lx
+except Exception as _e:
+    lx = None
+    print("[langx] LangExtract is not available, extraction endpoints will be limited.")
 
 MODEL_ID = os.environ.get("LX_MODEL_ID", "gpt-4o-mini")  # Используем поддерживаемую модель
 
