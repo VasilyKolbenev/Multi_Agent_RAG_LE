@@ -43,13 +43,18 @@ export default function DocumentSidebar({ onDocumentsChange }: DocumentSidebarPr
     try {
       setLoading(true)
       const docs = await ApiService.getDocuments()
-      // Преобразуем формат ответа в нужный
-      const formattedDocs = docs.map((doc: any, index: number) => ({
-        id: doc.doc_id || doc.id || `doc_${index}`,
-        name: doc.doc_id || doc.name || `Документ ${index + 1}`,
-        size: doc.size || doc.length,
-        created: doc.created || new Date().toISOString()
-      }))
+      // Сервер может вернуть массив строк doc_id либо объектов
+      const formattedDocs = (Array.isArray(docs) ? docs : []).map((doc: any, index: number) => {
+        if (typeof doc === 'string') {
+          return { id: doc, name: doc, size: undefined, created: undefined }
+        }
+        return {
+          id: doc.doc_id || doc.id || `doc_${index}`,
+          name: doc.name || doc.doc_id || `Документ ${index + 1}`,
+          size: doc.size || doc.length,
+          created: doc.created
+        }
+      })
       setDocuments(formattedDocs)
     } catch (error) {
       console.error('Failed to load documents:', error)
@@ -156,12 +161,19 @@ export default function DocumentSidebar({ onDocumentsChange }: DocumentSidebarPr
             <Plus className="w-5 h-5" />
           </button>
         </div>
-        
-        {documents.length > 0 && (
-          <div className="mt-2 text-sm text-slate-500">
+        <div className="flex items-center justify-between mt-2">
+          <div className="text-sm text-slate-500">
             {documents.length} документов
           </div>
-        )}
+          <button
+            onClick={loadDocuments}
+            className="text-xs text-slate-500 hover:text-slate-700 underline"
+          >
+            Обновить
+          </button>
+        </div>
+        
+        
       </div>
 
       {/* Notification */}
