@@ -51,7 +51,7 @@ export default function DocumentSidebar({ onDocumentsChange }: DocumentSidebarPr
         return {
           id: doc.doc_id || doc.id || `doc_${index}`,
           name: doc.name || doc.doc_id || `Документ ${index + 1}`,
-          size: doc.size || doc.length,
+          size: doc.text_length,
           created: doc.created
         }
       })
@@ -69,25 +69,45 @@ export default function DocumentSidebar({ onDocumentsChange }: DocumentSidebarPr
 
     try {
       setUploading(true)
-      const result = await ApiService.ingest(files)
-      
-      // Если включено автоматическое извлечение сущностей
-      if (autoExtract && result.results) {
+
+      // Для текстовых файлов можем отправить пачкой
+      const textLike: File[] = []
+      const binaryLike: File[] = []
+      Array.from(files).forEach(f => {
+        const name = f.name.toLowerCase()
+        if (name.endsWith('.txt') || name.endsWith('.md') || name.endsWith('.rtf') || name.endsWith('.csv') || name.endsWith('.json') || name.endsWith('.xml') || name.endsWith('.html')) {
+          textLike.push(f)
+        } else {
+          binaryLike.push(f)
+        }
+      })
+
+      if (textLike.length > 0) {
+        const result = await ApiService.ingest(textLike as unknown as FileList)
+        showNotification('success', `Загружено текстовых: ${result.count}`)
+      }
+
+      // Для PDF/DOCX и др. извлекаем текст на сервере, затем добавляем через /ingest (text)
+      for (const file of binaryLike) {
         try {
-          // Извлекаем текст из загруженных файлов для обработки
-          const textFiles = result.results.filter((r: any) => r.type === 'text')
-          if (textFiles.length > 0) {
-            // Простое извлечение сущностей из первого текстового файла
-            // В реальном приложении можно обработать все файлы
-            showNotification('success', `Загружено ${result.count} документов. Извлекаем сущности...`)
-            // Здесь можно добавить вызов LangExtract, если нужно
+          const extracted = await ApiService.extractText(file)
+          const text = extracted.text || ''
+          if (text.trim()) {
+            const docId = `file_${file.name}_${Date.now().toString(36)}`
+            await ApiService.ingest(null, text, docId)
+          } else {
+            console.warn('Extracted empty text for', file.name)
           }
-        } catch (extractError) {
-          console.warn('Entity extraction failed:', extractError)
+        } catch (e) {
+          console.error('ExtractText failed for', file.name, e)
         }
       }
-      
-      showNotification('success', `Загружено документов: ${result.count}`)
+
+      // Если включено автоизвлечение сущностей — просто покажем уведомление; серверные эндпоинты уже готовы
+      if (autoExtract) {
+        showNotification('success', 'Извлечение сущностей включено. Можно запустить его в соответствующем разделе.')
+      }
+
       await loadDocuments()
       onDocumentsChange?.()
       setShowUpload(false)
@@ -348,3 +368,4 @@ export default function DocumentSidebar({ onDocumentsChange }: DocumentSidebarPr
     </div>
   )
 }
+
