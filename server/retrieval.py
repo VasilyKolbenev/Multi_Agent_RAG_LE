@@ -2,8 +2,8 @@ import os, re, json
 import numpy as np
 from typing import List, Tuple, Optional, Set, Dict, Any
 from rank_bm25 import BM25Okapi
-import faiss
-from openai import OpenAI
+# import faiss  # Отключено - используем только BM25
+# from openai import OpenAI  # Отключено - используем только BM25
 from . import config # Импортируем наш новый конфиг
 
 from dataclasses import dataclass
@@ -47,20 +47,15 @@ EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# Инициализация клиента OpenAI (теперь безопасная)
-openai_client = OpenAI(api_key=config.OPENAI_API_KEY)
+# OpenAI embeddings отключены - используем только BM25
+# openai_client = OpenAI(api_key=embedding_key)
 
 
 # --- Утилиты ---
 
 def _get_embedding(text: str):
-    try:
-        response = openai_client.embeddings.create(input=[text.replace("\n", " ")], model=config.EMBEDDING_MODEL)
-        return response.data[0].embedding
-    except Exception as e:
-        print(f"[EMBEDDING] Error creating embedding: {e}")
-        # Возвращаем фиктивный embedding для продолжения работы
-        return [0.0] * 1536  # Размерность text-embedding-3-small
+    # Embeddings отключены - используем только BM25 поиск
+    return None
 
 def _semantic_chunking(text: str, max_chunk_size=1500):
     """
@@ -151,8 +146,7 @@ class HybridCorpus:
         self._load()
 
     def _load(self):
-        if os.path.exists(FAISS_INDEX_PATH):
-            self.index = faiss.read_index(FAISS_INDEX_PATH)
+        # FAISS отключен - загружаем только чанки и документы
         if os.path.exists(CHUNK_MAP_PATH):
             with open(CHUNK_MAP_PATH, 'r', encoding='utf-8') as f:
                 self.chunks = json.load(f)
@@ -163,8 +157,7 @@ class HybridCorpus:
         self._reindex_bm25()
 
     def _save(self):
-        if self.index:
-            faiss.write_index(self.index, FAISS_INDEX_PATH)
+        # FAISS отключен - сохраняем только чанки и документы
         with open(CHUNK_MAP_PATH, 'w', encoding='utf-8') as f:
             json.dump(self.chunks, f, ensure_ascii=False, indent=4)
         with open(DOCS_PATH, 'w', encoding='utf-8') as f:
@@ -176,20 +169,10 @@ class HybridCorpus:
         
         if not chunk_texts: return
 
-        embeddings = [_get_embedding(chunk) for chunk in chunk_texts]
-        
-        # Обновляем FAISS индекс
-        if self.index is None:
-            dimension = len(embeddings[0])
-            self.index = faiss.IndexFlatL2(dimension)
-            self.index = faiss.IndexIDMap(self.index)
-
-        # Создаем уникальные числовые ID для FAISS
+        # Создаем уникальные ID для чанков (без FAISS)
         start_id = max([int(k) for k in self.chunks.keys()] + [0]) + 1
-        ids = np.arange(start_id, start_id + len(embeddings))
-        self.index.add_with_ids(np.array(embeddings).astype('float32'), ids)
 
-        # Обновляем маппинг
+        # Обновляем маппинг чанков (только BM25, без векторов)
         for i, chunk_text in enumerate(chunk_texts):
             self.chunks[str(start_id + i)] = {"doc_id": doc_id, "text": chunk_text}
             
@@ -205,33 +188,34 @@ class HybridCorpus:
             self.bm25 = BM25Okapi(tokenized_chunks)
 
     def search(self, query: str, k: int = 10, allowed_docs: Optional[Set[str]] = None) -> List[Dict[str, Any]]:
-        # Проверяем, что индекс существует
-        if self.index is None or len(self.chunks) == 0:
+        # Проверяем, что есть чанки для поиска
+        if len(self.chunks) == 0:
             return []
             
-        # 1. Dense Search (FAISS)
-        query_embedding = np.array([_get_embedding(query)]).astype('float32')
-        distances, ids = self.index.search(query_embedding, k)
-        dense_results = [(str(faiss_id), rank) for rank, faiss_id in enumerate(ids[0]) if faiss_id != -1]
-        
-        # 2. Sparse Search (BM25) - по всем чанкам
-        bm25_results = []
+        # Только BM25 поиск (без векторного)
+        final_chunks = []
         if self.bm25:
             qtok = re.findall(r"[\w']+", query.lower())
             scores = self.bm25.get_scores(qtok)
-            top_n_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:k]
-            bm25_results = [(str(i), rank) for rank, i in enumerate(top_n_indices)]
-
-        # 3. RRF Merge
-        merged_ids = self._rrf_merge([dense_results, bm25_results])
-        
-        final_chunks = []
-        for chunk_id in merged_ids:
-            if chunk_id in self.chunks:
-                chunk_data = self.chunks[chunk_id]
-                # Фильтрация по allowed_docs если указана
-                if allowed_docs is None or chunk_data['doc_id'] in allowed_docs:
-                    final_chunks.append({"chunk_id": chunk_id, "doc_id": chunk_data['doc_id'], "text": chunk_data['text']})
+            
+            # Получаем топ результаты с их индексами
+            chunk_ids = list(self.chunks.keys())
+            scored_chunks = [(chunk_ids[i], scores[i]) for i in range(len(scores)) if i < len(chunk_ids)]
+            
+            # Сортируем по релевантности
+            scored_chunks.sort(key=lambda x: x[1], reverse=True)
+            
+            for chunk_id, score in scored_chunks[:k]:
+                if chunk_id in self.chunks:
+                    chunk_data = self.chunks[chunk_id]
+                    # Фильтрация по allowed_docs если указана
+                    if allowed_docs is None or chunk_data['doc_id'] in allowed_docs:
+                        final_chunks.append({
+                            "chunk_id": chunk_id, 
+                            "doc_id": chunk_data['doc_id'], 
+                            "text": chunk_data['text'],
+                            "score": score
+                        })
         
         return final_chunks[:k]
 
