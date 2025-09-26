@@ -54,8 +54,13 @@ openai_client = OpenAI(api_key=config.OPENAI_API_KEY)
 # --- Утилиты ---
 
 def _get_embedding(text: str):
-    response = openai_client.embeddings.create(input=[text.replace("\n", " ")], model=config.EMBEDDING_MODEL)
-    return response.data[0].embedding
+    try:
+        response = openai_client.embeddings.create(input=[text.replace("\n", " ")], model=config.EMBEDDING_MODEL)
+        return response.data[0].embedding
+    except Exception as e:
+        print(f"[EMBEDDING] Error creating embedding: {e}")
+        # Возвращаем фиктивный embedding для продолжения работы
+        return [0.0] * 1536  # Размерность text-embedding-3-small
 
 def _semantic_chunking(text: str, max_chunk_size=1500):
     """
