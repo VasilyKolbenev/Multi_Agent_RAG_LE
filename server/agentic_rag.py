@@ -45,7 +45,9 @@ class AgenticRAGSystem:
             }
                 
         except Exception as e:
+            import traceback
             logger.error(f"❌ Agentic query processing error: {e}")
+            traceback.print_exc()
             return {
                 "query": query,
                 "error": str(e),
