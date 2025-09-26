@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://multiagentragle-production.up.railway.app'
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://multiagent-rag-api-production.up.railway.app'
 
 export class ApiService {
   static async health() {
