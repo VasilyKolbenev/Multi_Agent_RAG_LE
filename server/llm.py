@@ -3,16 +3,19 @@ import asyncio
 from server import config
 
 class LLM:
-    def __init__(self, model=None, provider=None, key=None):
+    def __init__(self, model=None, provider=None, key=None, base_url=None):
         self.model = model or config.LLM_MODEL
-        self.provider = provider or os.environ.get("LLM_PROVIDER", "openai")
-        self.key = key or config.OPENAI_API_KEY
+        self.provider = (provider or os.environ.get("LLM_PROVIDER", config.LLM_PROVIDER)).lower()
+        self.key = key or config.LLM_API_KEY
+        self.base_url = base_url or _resolve_base_url(self.provider)
 
     async def complete(self, system: str, user: str) -> str:
         if self.provider == "stub":
             return self._stub(system, user)
         elif self.provider == "openai":
             return await self._openai(system, user)
+        elif self.provider == "vsegpt":
+            return await self._vsegpt(system, user)
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
 
@@ -20,6 +23,9 @@ class LLM:
         """Асинхронный генератор для потоковой передачи ответа."""
         if self.provider == "openai":
             async for chunk in self._openai_stream(system, user):
+                yield chunk
+        elif self.provider == "vsegpt":
+            async for chunk in self._vsegpt_stream(system, user):
                 yield chunk
         else:
             # Для других провайдеров (или stub) эмулируем поток
@@ -30,7 +36,9 @@ class LLM:
 
     async def _openai(self, system: str, user: str) -> str:
         is_gpt5 = self.model.startswith("gpt-5")
-        url = "https://api.openai.com/v1/responses" if is_gpt5 else "https://api.openai.com/v1/chat/completions"
+        url = config.OPENAI_BASE_URL or self.base_url or "https://api.openai.com/v1"
+        endpoint = "responses" if is_gpt5 else "chat/completions"
+        url = f"{url.rstrip('/')}/{endpoint}"
         headers = {"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"}
         # Поддержка проектных/организационных ключей
         openai_project = os.getenv("OPENAI_PROJECT")
@@ -89,7 +97,9 @@ class LLM:
     async def _openai_stream(self, system: str, user: str):
         """Асинхронный генератор для потоковой передачи от OpenAI."""
         is_gpt5 = self.model.startswith("gpt-5")
-        url = "https://api.openai.com/v1/responses" if is_gpt5 else "https://api.openai.com/v1/chat/completions"
+        url = config.OPENAI_BASE_URL or self.base_url or "https://api.openai.com/v1"
+        endpoint = "responses" if is_gpt5 else "chat/completions"
+        url = f"{url.rstrip('/')}/{endpoint}"
         headers = {"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"}
         openai_project = os.getenv("OPENAI_PROJECT")
         openai_org = os.getenv("OPENAI_ORG") or os.getenv("OPENAI_ORGANIZATION")
@@ -145,6 +155,66 @@ class LLM:
                                         yield content
                         except json.JSONDecodeError:
                             print(f"Failed to decode JSON: {data_str}")
+                            continue
+
+    async def _vsegpt(self, system: str, user: str) -> str:
+        url = self.base_url or config.VSEGPT_BASE_URL
+        url = f"{url.rstrip('/')}/chat/completions"
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            "temperature": 0.2,
+            "max_tokens": 2000,
+        }
+        headers = {"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"}
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(url, json=payload, headers=headers)
+            if r.status_code == 401:
+                print("[LLM] 401 Unauthorized from VseGPT. Falling back to stub provider.")
+                return self._stub(system, user)
+            r.raise_for_status()
+            data = r.json()
+            return data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+
+    async def _vsegpt_stream(self, system: str, user: str):
+        url = self.base_url or config.VSEGPT_BASE_URL
+        url = f"{url.rstrip('/')}/chat/completions"
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            "temperature": 0.2,
+            "max_tokens": 2000,
+            "stream": True,
+        }
+        headers = {"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"}
+        async with httpx.AsyncClient(timeout=30) as client:
+            async with client.stream("POST", url, json=payload, headers=headers) as response:
+                if response.status_code == 401:
+                    yield self._stub(system, user)
+                    return
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line:
+                        continue
+                    if line.startswith("data:"):
+                        data_str = line[len("data:"):].strip()
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            data = json.loads(data_str)
+                            if "choices" in data and data["choices"]:
+                                delta = data["choices"][0].get("delta", {})
+                                content = delta.get("content")
+                                if content:
+                                    yield content
+                        except json.JSONDecodeError:
+                            print(f"[LLM] Failed to decode VseGPT stream chunk: {data_str}")
                             continue
 
     async def _ollama(self, system: str, user: str) -> str:

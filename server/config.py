@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 # --- Централизованная загрузка конфигурации ---
-
 # Явно указываем путь к .env файлу в корне проекта
 # Это самый надежный способ для Railway
 env_path = Path(__file__).parent.parent / '.env'
@@ -17,84 +16,65 @@ else:
 
 # --- Главные переменные конфигурации ---
 
-# Загружаем ключ OpenAI и сразу проверяем его наличие
-# Сначала пробуем системные переменные (Railway UI Variables)
-# Подтягиваем ключ и убираем случайные пробелы/переносы строк/кавычки
-# Чистим ключ максимально агрессивно от скрытых символов
-_raw_key = (os.getenv("OPENAI_API_KEY") or os.getenv("API _KEY") or os.getenv("API_KEY") or "")
-_raw_key = _raw_key.strip().strip('"').strip("'")
-# Удаляем все неразрешенные символы (оставляем только латиницу/цифры/-_.)
-OPENAI_API_KEY = re.sub(r"[^A-Za-z0-9_\-.]", "", _raw_key)
+# Определяем провайдера
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai").strip().lower()
 
-# Если не нашли, показываем подробную диагностику
-if not OPENAI_API_KEY:
-    print("🔍 OPENAI_API_KEY not found. Debugging...")
-    print(f"   - Environment variables count: {len(os.environ)}")
-    
-    # Ищем переменные, которые могут содержать ключ
-    api_key_vars = [k for k in os.environ.keys() if 'API' in k.upper() or 'KEY' in k.upper()]
-    if api_key_vars:
-        print(f"   - Found API/KEY variables: {api_key_vars}")
-        for var in api_key_vars:
-            value = os.environ[var]
-            print(f"     * {var}: {value[:10]}...{value[-4:] if len(value) > 14 else value}")
-    else:
-        print("   - No API/KEY variables found in environment")
-    
+
+def _pick_env(*names: str) -> str:
+    for name in names:
+        value = os.getenv(name)
+        if value and value.strip():
+            return value
+    return ""
+
+# Универсальный ключ (поддерживаем OpenAI, VseGPT и другие OpenAI-совместимые API)
+_raw_key = _pick_env("LLM_API_KEY", "OPENAI_API_KEY", "API_KEY", "API _KEY")
+_raw_key = _raw_key.strip().strip('"').strip("'") if _raw_key else ""
+LLM_API_KEY = re.sub(r"[^A-Za-z0-9_\-.]", "", _raw_key)
+
+if not LLM_API_KEY and LLM_PROVIDER not in {"stub", ""}:
     raise ValueError(
-        "CRITICAL: OPENAI_API_KEY is not set or could not be loaded. "
-        "Please ensure it is set as 'OPENAI_API_KEY' in Railway Variables."
+        "CRITICAL: API key is not set. Provide it via LLM_API_KEY or OPENAI_API_KEY."
     )
 
-# Печатаем маскированное значение для проверки в логах
-print(f"   - OPENAI_API_KEY: Loaded (sk-proj-...{OPENAI_API_KEY[-4:]})")
-# Загружаем дополнительные параметры OpenAI
-OPENAI_PROJECT = os.getenv("OPENAI_PROJECT", "").strip()
-OPENAI_ORGANIZATION = (
-    os.getenv("OPENAI_ORG")
-    or os.getenv("OPENAI_ORGANIZATION")
-    or os.getenv("OPENAI_DEFAULT_ORG")
-    or ""
-).strip()
-
-if OPENAI_API_KEY.startswith("sk-proj-") and not OPENAI_PROJECT:
-    print(
-        "⚠️  Detected project-scoped OpenAI key (sk-proj-...), "
-        "but OPENAI_PROJECT variable is not set.\n"
-        "   Set OPENAI_PROJECT to your project ID (found in the OpenAI dashboard) "
-        "to avoid 401 errors."
-    )
-
-if OPENAI_PROJECT:
-    print(f"   - OPENAI_PROJECT: {OPENAI_PROJECT}")
-if OPENAI_ORGANIZATION:
-    print(f"   - OPENAI_ORGANIZATION: {OPENAI_ORGANIZATION}")
-
-if not OPENAI_API_KEY.startswith("sk-"):
-    print("⚠️  OPENAI_API_KEY doesn't start with 'sk-'. Check for extra characters or wrong key type.")
+if LLM_API_KEY:
+    print(f"   - LLM_API_KEY: Loaded (***{LLM_API_KEY[-4:]})")
 else:
-    # Project-scoped keys contain the project ID in the middle: sk-proj-<projid>-<rest>
-    parts = OPENAI_API_KEY.split("-")
-    if len(parts) >= 4 and parts[1] == "proj":
-        inferred_project = parts[2]
-        if OPENAI_PROJECT and OPENAI_PROJECT != inferred_project:
-            print(
-                "⚠️  OPENAI_PROJECT mismatch: env has"
-                f" '{OPENAI_PROJECT}', but key implies '{inferred_project}'."
-            )
-        elif not OPENAI_PROJECT:
-            print(
-                "💡 Hint: Set OPENAI_PROJECT="
-                f"{inferred_project} to match your project-scoped key."
-            )
+    print("   - LLM_API_KEY: not provided (stub provider)")
 
-print(f"   - OPENAI_API_KEY length: {len(OPENAI_API_KEY)} (sanitized)")
+# Дополнительные настройки для OpenAI
+OPENAI_PROJECT = ""
+OPENAI_ORGANIZATION = ""
+if LLM_PROVIDER == "openai":
+    OPENAI_PROJECT = os.getenv("OPENAI_PROJECT", "").strip()
+    OPENAI_ORGANIZATION = (
+        os.getenv("OPENAI_ORG")
+        or os.getenv("OPENAI_ORGANIZATION")
+        or os.getenv("OPENAI_DEFAULT_ORG")
+        or ""
+    ).strip()
+
+    if LLM_API_KEY.startswith("sk-proj-") and not OPENAI_PROJECT:
+        print(
+            "⚠️  Detected project-scoped OpenAI key (sk-proj-...), but OPENAI_PROJECT variable is not set."
+        )
+    if OPENAI_PROJECT:
+        print(f"   - OPENAI_PROJECT: {OPENAI_PROJECT}")
+    if OPENAI_ORGANIZATION:
+        print(f"   - OPENAI_ORGANIZATION: {OPENAI_ORGANIZATION}")
+
+# Базовый URL (в том числе для VseGPT)
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "").strip()
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "").strip()
+OPENAI_EMBED_BASE_URL = os.getenv("OPENAI_EMBED_BASE_URL", "").strip()
+VSEGPT_BASE_URL = os.getenv("VSEGPT_BASE_URL", "https://api.vsegpt.ru/v1").strip()
 
 # Остальные настройки
-# Читаем модель из переменных окружения, по умолчанию gpt-5-mini
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-5-mini").strip()
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini").strip()
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small").strip()
-LX_MODEL_ID = os.getenv("LX_MODEL_ID", "gpt-4o-mini")  # Используем поддерживаемую LangExtract модель
+LX_MODEL_ID = os.getenv("LX_MODEL_ID", "gpt-4o-mini")
 
+print(f"   - LLM_PROVIDER: {LLM_PROVIDER}")
 print(f"   - LLM_MODEL: {LLM_MODEL}")
 print(f"   - EMBEDDING_MODEL: {EMBEDDING_MODEL}")
+print(f"   - VSEGPT_BASE_URL: {VSEGPT_BASE_URL}")
