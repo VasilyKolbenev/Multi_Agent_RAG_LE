@@ -36,17 +36,23 @@ def run_extraction(text_or_url: str, prompt: Optional[str]=None, examples: Optio
                              for it in e.get("extractions",[])]
              ) for e in examples]
 
-    # --- DEBUG LANGEXTRACT PARAMS ---
+    # --- LANGEXTRACT CONFIGURATION ---
     from . import config
-    # ПРИНУДИТЕЛЬНО используем поддерживаемую модель (Railway переопределяет переменную)
-    lx_model_id = "gpt-4o-mini"  # Принудительно, так как Railway имеет старое значение в Variables
-    api_key = config.OPENAI_API_KEY
-    print("="*50)
-    print("🔍 DEBUG: LangExtract Parameters")
-    print(f"  - Model ID: {lx_model_id}")
-    print(f"  - API Key Set: {'Yes' if api_key else 'No'}")
-    print("="*50)
-    # --- END DEBUG ---
+    
+    # Настройка для VseGPT
+    if config.LLM_PROVIDER == "vsegpt":
+        # LangExtract может работать через VseGPT с правильной моделью
+        lx_model_id = f"vsegpt:{config.LLM_MODEL}"  # Префикс для VseGPT
+        api_key = config.LLM_API_KEY
+        # Настройка базового URL для LangExtract
+        os.environ["OPENAI_BASE_URL"] = config.VSEGPT_BASE_URL
+    else:
+        # Стандартная настройка OpenAI
+        lx_model_id = config.LX_MODEL_ID
+        api_key = config.OPENAI_API_KEY
+    
+    print(f"[LangExtract] Model: {lx_model_id}, Provider: {config.LLM_PROVIDER}")
+    # --- END CONFIGURATION ---
 
     try:
         result = lx.extract(

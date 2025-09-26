@@ -99,15 +99,17 @@ class MultiAgent:
     async def run(self, query: str, k: int = 5, entities_filter: Optional[List[str]] = None, auto_extract: bool = True) -> Dict[str, Any]:
         plan = await self.llm.complete(SYSTEM_PLANNER, query)
         
-        # Автоматическое извлечение сущностей из запроса
+        # Автоматическое извлечение сущностей (теперь через VseGPT)
         extracted_entities = []
         if auto_extract and not entities_filter:
             try:
                 extraction_result = run_extraction(query, "Извлеки людей, компании, места, события и даты из этого вопроса")
                 extracted_entities = [item.get("text", "") for item in extraction_result.get("items", []) if item.get("text")]
                 entities_filter = extracted_entities[:10]  # Ограничиваем до 10 сущностей
+                print(f"[Entities] Extracted: {extracted_entities}")
             except Exception as e:
                 print(f"Ошибка извлечения сущностей: {e}")
+                # Продолжаем без извлечения сущностей
         
         allowed_docs: Optional[Set[str]] = None
         if entities_filter:
