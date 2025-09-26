@@ -41,8 +41,11 @@ def run_extraction(text_or_url: str, prompt: Optional[str]=None, examples: Optio
     
     # Настройка для VseGPT
     if config.LLM_PROVIDER == "vsegpt":
-        # LangExtract может работать через VseGPT с правильной моделью
-        lx_model_id = f"vsegpt:{config.LLM_MODEL}"  # Префикс для VseGPT
+        # LangExtract поддерживает qwen модели напрямую
+        if "qwen" in config.LLM_MODEL.lower():
+            lx_model_id = "qwen2.5-72b-instruct"  # Поддерживаемая LangExtract модель
+        else:
+            lx_model_id = "gpt-4o-mini"  # Fallback
         api_key = config.LLM_API_KEY
         # Настройка базового URL для LangExtract
         os.environ["OPENAI_BASE_URL"] = config.VSEGPT_BASE_URL
