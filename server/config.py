@@ -1,4 +1,5 @@
 import os
+import re
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -19,7 +20,11 @@ else:
 # Загружаем ключ OpenAI и сразу проверяем его наличие
 # Сначала пробуем системные переменные (Railway UI Variables)
 # Подтягиваем ключ и убираем случайные пробелы/переносы строк/кавычки
-OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or os.getenv("API _KEY") or os.getenv("API_KEY") or "").strip().strip('"').strip("'")
+# Чистим ключ максимально агрессивно от скрытых символов
+_raw_key = (os.getenv("OPENAI_API_KEY") or os.getenv("API _KEY") or os.getenv("API_KEY") or "")
+_raw_key = _raw_key.strip().strip('"').strip("'")
+# Удаляем все неразрешенные символы (оставляем только латиницу/цифры/-_.)
+OPENAI_API_KEY = re.sub(r"[^A-Za-z0-9_\-.]", "", _raw_key)
 
 # Если не нашли, показываем подробную диагностику
 if not OPENAI_API_KEY:
@@ -45,6 +50,44 @@ if not OPENAI_API_KEY:
 print(f"   - OPENAI_API_KEY: Loaded (sk-proj-...{OPENAI_API_KEY[-4:]})")
 if not OPENAI_API_KEY.startswith("sk-"):
     print("⚠️  OPENAI_API_KEY doesn't start with 'sk-'. Check for extra characters or wrong key type.")
+else:
+    # Project-scoped keys contain the project ID in the middle: sk-proj-<projid>-<rest>
+    parts = OPENAI_API_KEY.split("-")
+    if len(parts) >= 4 and parts[1] == "proj":
+        inferred_project = parts[2]
+        if OPENAI_PROJECT and OPENAI_PROJECT != inferred_project:
+            print(
+                "⚠️  OPENAI_PROJECT mismatch: env has"
+                f" '{OPENAI_PROJECT}', but key implies '{inferred_project}'."
+            )
+        elif not OPENAI_PROJECT:
+            print(
+                "💡 Hint: Set OPENAI_PROJECT="
+                f"{inferred_project} to match your project-scoped key."
+            )
+print(f"   - OPENAI_API_KEY length: {len(OPENAI_API_KEY)} (sanitized)")
+
+# Загружаем дополнительные параметры OpenAI
+OPENAI_PROJECT = os.getenv("OPENAI_PROJECT", "").strip()
+OPENAI_ORGANIZATION = (
+    os.getenv("OPENAI_ORG")
+    or os.getenv("OPENAI_ORGANIZATION")
+    or os.getenv("OPENAI_DEFAULT_ORG")
+    or ""
+).strip()
+
+if OPENAI_API_KEY.startswith("sk-proj-") and not OPENAI_PROJECT:
+    print(
+        "⚠️  Detected project-scoped OpenAI key (sk-proj-...), "
+        "but OPENAI_PROJECT variable is not set.\n"
+        "   Set OPENAI_PROJECT to your project ID (found in the OpenAI dashboard) "
+        "to avoid 401 errors."
+    )
+
+if OPENAI_PROJECT:
+    print(f"   - OPENAI_PROJECT: {OPENAI_PROJECT}")
+if OPENAI_ORGANIZATION:
+    print(f"   - OPENAI_ORGANIZATION: {OPENAI_ORGANIZATION}")
 
 # Остальные настройки
 # Читаем модель из переменных окружения, по умолчанию gpt-5-mini
