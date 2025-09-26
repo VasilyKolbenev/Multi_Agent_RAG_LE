@@ -183,13 +183,20 @@ class LLM:
         }
         headers = {"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"}
         async with httpx.AsyncClient(timeout=30) as client:
-            r = await client.post(url, json=payload, headers=headers)
-            if r.status_code == 401:
-                print("[LLM] 401 Unauthorized from VseGPT. Falling back to stub provider.")
+            try:
+                r = await client.post(url, json=payload, headers=headers)
+                if r.status_code == 401:
+                    print("[LLM] 401 Unauthorized from VseGPT. Falling back to stub provider.")
+                    return self._stub(system, user)
+                if r.status_code == 400:
+                    print(f"[LLM] 400 Bad Request from VseGPT. Response: {r.text[:500]}")
+                    return self._stub(system, user)
+                r.raise_for_status()
+                data = r.json()
+                return data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+            except Exception as e:
+                print(f"[LLM] VseGPT error: {e}")
                 return self._stub(system, user)
-            r.raise_for_status()
-            data = r.json()
-            return data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
 
     async def _vsegpt_stream(self, system: str, user: str):
         url = self.base_url or config.VSEGPT_BASE_URL
