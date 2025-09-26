@@ -48,25 +48,6 @@ if not OPENAI_API_KEY:
 
 # Печатаем маскированное значение для проверки в логах
 print(f"   - OPENAI_API_KEY: Loaded (sk-proj-...{OPENAI_API_KEY[-4:]})")
-if not OPENAI_API_KEY.startswith("sk-"):
-    print("⚠️  OPENAI_API_KEY doesn't start with 'sk-'. Check for extra characters or wrong key type.")
-else:
-    # Project-scoped keys contain the project ID in the middle: sk-proj-<projid>-<rest>
-    parts = OPENAI_API_KEY.split("-")
-    if len(parts) >= 4 and parts[1] == "proj":
-        inferred_project = parts[2]
-        if OPENAI_PROJECT and OPENAI_PROJECT != inferred_project:
-            print(
-                "⚠️  OPENAI_PROJECT mismatch: env has"
-                f" '{OPENAI_PROJECT}', but key implies '{inferred_project}'."
-            )
-        elif not OPENAI_PROJECT:
-            print(
-                "💡 Hint: Set OPENAI_PROJECT="
-                f"{inferred_project} to match your project-scoped key."
-            )
-print(f"   - OPENAI_API_KEY length: {len(OPENAI_API_KEY)} (sanitized)")
-
 # Загружаем дополнительные параметры OpenAI
 OPENAI_PROJECT = os.getenv("OPENAI_PROJECT", "").strip()
 OPENAI_ORGANIZATION = (
@@ -88,6 +69,26 @@ if OPENAI_PROJECT:
     print(f"   - OPENAI_PROJECT: {OPENAI_PROJECT}")
 if OPENAI_ORGANIZATION:
     print(f"   - OPENAI_ORGANIZATION: {OPENAI_ORGANIZATION}")
+
+if not OPENAI_API_KEY.startswith("sk-"):
+    print("⚠️  OPENAI_API_KEY doesn't start with 'sk-'. Check for extra characters or wrong key type.")
+else:
+    # Project-scoped keys contain the project ID in the middle: sk-proj-<projid>-<rest>
+    parts = OPENAI_API_KEY.split("-")
+    if len(parts) >= 4 and parts[1] == "proj":
+        inferred_project = parts[2]
+        if OPENAI_PROJECT and OPENAI_PROJECT != inferred_project:
+            print(
+                "⚠️  OPENAI_PROJECT mismatch: env has"
+                f" '{OPENAI_PROJECT}', but key implies '{inferred_project}'."
+            )
+        elif not OPENAI_PROJECT:
+            print(
+                "💡 Hint: Set OPENAI_PROJECT="
+                f"{inferred_project} to match your project-scoped key."
+            )
+
+print(f"   - OPENAI_API_KEY length: {len(OPENAI_API_KEY)} (sanitized)")
 
 # Остальные настройки
 # Читаем модель из переменных окружения, по умолчанию gpt-5-mini
