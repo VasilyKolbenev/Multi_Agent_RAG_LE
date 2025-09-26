@@ -2,6 +2,18 @@ import os, json, httpx
 import asyncio
 from server import config
 
+
+def _resolve_base_url(provider: str) -> str:
+    provider = (provider or "").lower()
+    if provider == "openai":
+        return config.OPENAI_BASE_URL
+    if provider == "vsegpt":
+        return config.VSEGPT_BASE_URL
+    if provider == "ollama":
+        return os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/api")
+    return config.LLM_BASE_URL or ""
+
+
 class LLM:
     def __init__(self, model=None, provider=None, key=None, base_url=None):
         self.model = model or config.LLM_MODEL

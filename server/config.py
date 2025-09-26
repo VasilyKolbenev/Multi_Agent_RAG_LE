@@ -31,11 +31,16 @@ def _pick_env(*names: str) -> str:
 _raw_key = _pick_env("LLM_API_KEY", "OPENAI_API_KEY", "API_KEY", "API _KEY")
 _raw_key = _raw_key.strip().strip('"').strip("'") if _raw_key else ""
 LLM_API_KEY = re.sub(r"[^A-Za-z0-9_\-.]", "", _raw_key)
+OPENAI_API_KEY = LLM_API_KEY
 
-if not LLM_API_KEY and LLM_PROVIDER not in {"stub", ""}:
-    raise ValueError(
-        "CRITICAL: API key is not set. Provide it via LLM_API_KEY or OPENAI_API_KEY."
-    )
+if not LLM_API_KEY:
+    if LLM_PROVIDER not in {"stub", ""}:
+        print(
+            "⚠️  API key not provided; falling back to stub provider."
+        )
+    LLM_PROVIDER = "stub"
+
+# Совместимость со старым именем
 
 if LLM_API_KEY:
     print(f"   - LLM_API_KEY: Loaded (***{LLM_API_KEY[-4:]})")
@@ -65,9 +70,13 @@ if LLM_PROVIDER == "openai":
 
 # Базовый URL (в том числе для VseGPT)
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "").strip()
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "").strip()
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").strip()
 OPENAI_EMBED_BASE_URL = os.getenv("OPENAI_EMBED_BASE_URL", "").strip()
-VSEGPT_BASE_URL = os.getenv("VSEGPT_BASE_URL", "https://api.vsegpt.ru/v1").strip()
+VSEGPT_BASE_URL = (
+    os.getenv("VSEGPT_BASE_URL")
+    or os.getenv("VSE_GPT_BASE_URL")
+    or "https://api.vsegpt.ru/v1"
+).strip()
 
 # Остальные настройки
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini").strip()
